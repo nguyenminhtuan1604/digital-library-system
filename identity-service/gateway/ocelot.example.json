@@ -1,0 +1,7 @@
+{
+  "Routes": [
+    { "DownstreamPathTemplate": "/api/auth/{everything}", "DownstreamScheme": "http", "DownstreamHostAndPorts": [{ "Host": "identity-report-service", "Port": 8080 }], "UpstreamPathTemplate": "/gateway/n3/auth/{everything}", "UpstreamHttpMethod": ["GET","POST","PUT","DELETE"] },
+    { "DownstreamPathTemplate": "/api/reports/{everything}", "DownstreamScheme": "http", "DownstreamHostAndPorts": [{ "Host": "identity-report-service", "Port": 8080 }], "UpstreamPathTemplate": "/gateway/n3/reports/{everything}", "UpstreamHttpMethod": ["GET","POST"] }
+  ],
+  "GlobalConfiguration": { "BaseUrl": "http://localhost:5003" }
+}
