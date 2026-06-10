@@ -18,8 +18,8 @@ public class BorrowingsController(
     IConfiguration config,
     IHttpClientFactory httpClientFactory) : ControllerBase
 {
-    private string CatalogUrl => config["Services:CatalogUrl"] ?? "http://localhost:5001";
-    private string IdentityUrl => config["Services:IdentityUrl"] ?? "http://localhost:5003";
+    private string CatalogUrl => config["CATALOG_SERVICE_URL"] ?? config["Services:CatalogUrl"] ?? "http://localhost:5001";
+    private string IdentityUrl => config["IDENTITY_SERVICE_URL"] ?? config["Services:IdentityUrl"] ?? "http://localhost:5003";
 
     [HttpGet]
     public async Task<IActionResult> GetBorrowings()

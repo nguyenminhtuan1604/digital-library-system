@@ -1,52 +1,36 @@
-# Dependencies
+# Node
 node_modules/
-.pnp
-.pnp.js
-
-# Build outputs
 dist/
 build/
-bin/
-obj/
-out/
-publish/
+.npm/
+.pnpm-store/
 
-# Environment files
+# Env
 .env
 .env.local
 .env.*.local
 
-# IDE
+# Logs
+*.log
+.dev-error.log
+.dev-out.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# .NET
+bin/
+obj/
 .vs/
-.vscode/
+
+# IDE
 .idea/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
+.vscode/
 
 # OS
 .DS_Store
 Thumbs.db
-ehthumbs.db
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.dev-error.log
-.dev-out.log
-
-# .NET
-*.nupkg
-project.lock.json
-*.nuget.props
-*.nuget.targets
-
-# Misc
-*.swp
-*.swo
-*~
-.cache
-.parcel-cache
+# Docker local
+docker-data/
