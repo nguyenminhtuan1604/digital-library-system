@@ -17,7 +17,7 @@ export const catalogApi = {
     return api.delete(`/catalog/books/${id}`)
   },
   searchBooks(params) {
-    return api.get('/catalog/search', { params })
+    return api.get('/catalog/books/search', { params })
   },
   // Categories
   getCategories() {

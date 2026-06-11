@@ -1,18 +1,19 @@
 <template>
   <div>
-    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center ga-4 mb-6">
+    <div class="page-heading">
       <div>
-        <h2 class="text-h5 font-weight-bold text-grey-darken-4">Quản lý Sách</h2>
-        <p class="text-body-2 text-grey">Thêm, sửa, xóa và theo dõi số lượng sách</p>
+        <div class="eyebrow mb-1">Catalog</div>
+        <h2 class="text-h4 font-weight-black text-grey-darken-4">Quản lý sách</h2>
+        <p class="text-body-2 text-grey">Thêm, sửa, xóa và theo dõi số lượng sách trong kho</p>
       </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="showAdd = true">Thêm sách mới</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-plus" class="text-none font-weight-bold" @click="showAdd = true">Thêm sách mới</v-btn>
     </div>
 
-    <v-card>
+    <v-card class="catalog-card">
       <v-card-text class="pa-6">
-        <div class="d-flex flex-column flex-sm-row ga-4 mb-6">
+        <div class="d-flex flex-column flex-sm-row ga-4 mb-6 align-stretch">
           <v-text-field v-model="search" placeholder="Tìm kiếm theo tên sách, tác giả, ISBN..." prepend-inner-icon="mdi-magnify" hide-details class="flex-grow-1" />
-          <v-btn variant="outlined" prepend-icon="mdi-filter-variant">Lọc</v-btn>
+          <v-btn variant="outlined" prepend-icon="mdi-filter-variant" class="text-none font-weight-bold">Lọc</v-btn>
         </div>
 
         <v-table>
@@ -27,9 +28,9 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="book in books" :key="book.id">
+            <tr v-for="book in filteredBooks" :key="book.id">
               <td>
-                <div style="width: 48px; height: 64px; border-radius: 4px; overflow: hidden; border: 1px solid #e5e7eb;">
+                <div class="book-cover">
                   <img v-if="book.coverImageUrl || book.coverImage" :src="book.coverImageUrl || book.coverImage" :alt="book.title" style="width: 100%; height: 100%; object-fit: cover;" />
                   <div v-else class="d-flex align-center justify-center h-100 bg-grey-lighten-3">
                     <v-icon size="24" color="grey">mdi-book</v-icon>
@@ -37,7 +38,7 @@
                 </div>
               </td>
               <td>
-                <p class="font-weight-bold text-grey-darken-4">{{ book.title }}</p>
+                <p class="font-weight-bold text-grey-darken-4 mb-1">{{ book.title }}</p>
                 <p class="text-caption text-grey">{{ book.author }}</p>
               </td>
               <td class="text-body-2 text-grey-darken-1" style="font-family: monospace;">{{ book.isbn || book.ISBN }}</td>
@@ -54,8 +55,11 @@
                 <v-btn icon variant="text" size="small" color="error" @click="confirmDelete(book)"><v-icon size="18">mdi-delete</v-icon></v-btn>
               </td>
             </tr>
-            <tr v-if="books.length === 0">
-              <td colspan="6" class="text-center text-grey py-8">Chưa có sách nào</td>
+            <tr v-if="filteredBooks.length === 0">
+              <td colspan="6" class="text-center text-grey py-10">
+                <v-icon size="34" color="grey-lighten-1" class="mb-2">mdi-bookshelf</v-icon>
+                <div>Chưa có sách phù hợp</div>
+              </td>
             </tr>
           </tbody>
         </v-table>
@@ -108,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { catalogApi } from '../../services/catalogApi'
 
 const books = ref([])
@@ -121,6 +125,22 @@ const deletingBook = ref(null)
 const saving = ref(false)
 
 const form = reactive({ isbn: '', title: '', author: '', publisher: '', categoryId: null, publishYear: null, coverImageUrl: '', description: '' })
+
+const filteredBooks = computed(() => {
+  const keyword = search.value.trim().toLowerCase()
+  if (!keyword) return books.value
+  return books.value.filter(book => {
+    const haystack = [
+      book.title,
+      book.author,
+      book.isbn,
+      book.ISBN,
+      book.publisher,
+      book.category?.name,
+    ].filter(Boolean).join(' ').toLowerCase()
+    return haystack.includes(keyword)
+  })
+})
 
 function getAvailable(book) {
   return book.copies?.filter(c => c.status === 'Available').length || 0
@@ -181,3 +201,18 @@ async function deleteBook() {
 
 onMounted(() => { loadBooks(); loadCategories() })
 </script>
+
+<style scoped>
+.catalog-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+
+.book-cover {
+  width: 52px;
+  height: 70px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+</style>

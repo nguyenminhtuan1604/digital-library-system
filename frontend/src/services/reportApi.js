@@ -2,7 +2,7 @@ import api from './api'
 
 export const reportApi = {
   getDashboard() {
-    return api.get('/reports/dashboard')
+    return api.get('/identity/dashboard')
   },
   getBorrowingReport(params) {
     return api.get('/reports/borrowing', { params })
