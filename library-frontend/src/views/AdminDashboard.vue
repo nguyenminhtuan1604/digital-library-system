@@ -18,7 +18,7 @@
             class="text-subtitle-2 font-weight-bold text-white tracking-tight"
             style="line-height: 1.2;"
           >
-            Library System
+            Digital Library
           </div>
           <div
             class="text-caption text-teal-lighten-4"
@@ -56,17 +56,64 @@
 
       <template #append>
         <div class="pa-3">
-          <div class="d-flex align-center pa-2 rounded-lg user-profile-box">
-            <v-avatar size="32" class="mr-3 border-white border">
-              <v-img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80" />
-            </v-avatar>
+          <v-menu
+            v-model="sidebarUserMenu"
+            location="top end"
+            offset="12"
+            :close-on-content-click="false"
+          >
+            <template #activator="{ props }">
+              <button v-bind="props" class="sidebar-user-btn" type="button">
+                <v-avatar size="38" color="#ccfbf1" class="mr-3 border-white border admin-head-avatar">
+                  <v-icon color="#0d9488" size="24">mdi-account</v-icon>
+                </v-avatar>
 
-            <div class="text-caption font-weight-bold text-white flex-grow-1">
-              Admin Thư viện
-            </div>
+                <div class="sidebar-user-text">
+                  <strong>{{ adminProfile.name }}</strong>
+                  <span>{{ adminProfile.role }}</span>
+                </div>
 
-            <v-icon color="teal-lighten-3" size="18">mdi-chevron-down</v-icon>
-          </div>
+                <v-icon color="teal-lighten-3" size="20">mdi-chevron-up</v-icon>
+              </button>
+            </template>
+
+            <v-card class="account-menu-card" elevation="10">
+              <div class="account-menu-head">
+                <v-avatar size="52" color="#ccfbf1" class="admin-head-avatar">
+                  <v-icon color="#0d9488" size="30">mdi-account</v-icon>
+                </v-avatar>
+
+                <div>
+                  <h4>{{ adminProfile.name }}</h4>
+                  <p>{{ adminProfile.email }}</p>
+                </div>
+              </div>
+
+              <v-divider />
+
+              <button class="account-menu-item" @click="openProfileDialog">
+                <v-icon size="21">mdi-account-circle-outline</v-icon>
+                Hồ sơ cá nhân
+              </button>
+
+              <button class="account-menu-item" @click="goToSettings">
+                <v-icon size="21">mdi-cog-outline</v-icon>
+                Cài đặt tài khoản
+              </button>
+
+              <button class="account-menu-item" @click="markAllNotificationsRead">
+                <v-icon size="21">mdi-bell-check-outline</v-icon>
+                Đánh dấu đã đọc thông báo
+              </button>
+
+              <v-divider />
+
+              <button class="account-menu-item logout" @click="logoutUser">
+                <v-icon size="21">mdi-logout</v-icon>
+                Đăng xuất
+              </button>
+            </v-card>
+          </v-menu>
         </div>
       </template>
     </v-navigation-drawer>
@@ -90,216 +137,506 @@
 
       <v-spacer />
 
-      <div class="d-flex align-center">
-        <v-text-field
-          v-model="quickSearch"
-          placeholder="Tìm kiếm nhanh..."
-          variant="outlined"
-          density="compact"
-          bg-color="white"
-          hide-details
-          rounded="pill"
-          append-inner-icon="mdi-magnify"
-          class="mr-4 search-input"
-          style="width: 240px;"
-        />
+      <div class="d-flex align-center dashboard-header-actions">
+        <!-- TÌM KIẾM NHANH -->
+        <v-menu
+          v-model="searchMenu"
+          location="bottom end"
+          offset="10"
+          :close-on-content-click="false"
+        >
+          <template #activator="{ props }">
+            <div v-bind="props" class="quick-search-wrap mr-4">
+              <v-text-field
+                v-model="quickSearch"
+                placeholder="Tìm kiếm nhanh..."
+                variant="outlined"
+                density="compact"
+                bg-color="white"
+                hide-details
+                rounded="pill"
+                append-inner-icon="mdi-magnify"
+                class="search-input"
+                style="width: 280px;"
+                @focus="searchMenu = true"
+                @click:append-inner="handleQuickSearch"
+                @keyup.enter="handleQuickSearch"
+              />
+            </div>
+          </template>
 
-        <v-badge content="5" color="red" offset-x="8" offset-y="8" class="mr-4">
-          <v-btn
-            icon="mdi-bell-outline"
-            variant="outlined"
-            color="grey-darken-1"
-            bg-color="white"
-            size="36"
-            class="rounded-circle bg-white"
-          />
-        </v-badge>
+          <v-card class="quick-search-menu" elevation="10">
+            <div class="search-menu-head">
+              <strong>Kết quả tìm kiếm</strong>
+              <span>{{ quickSearchResults.length }} kết quả</span>
+            </div>
 
-        <v-avatar size="36" class="border">
-          <v-img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80" />
-        </v-avatar>
+            <div v-if="quickSearchResults.length > 0" class="search-result-list">
+              <button
+                v-for="result in quickSearchResults"
+                :key="result.id"
+                class="search-result-item"
+                @click="openSearchResult(result)"
+              >
+                <span :style="{ background: result.bg, color: result.color }">
+                  <v-icon size="21">{{ result.icon }}</v-icon>
+                </span>
+
+                <div>
+                  <strong>{{ result.title }}</strong>
+                  <small>{{ result.desc }}</small>
+                </div>
+              </button>
+            </div>
+
+            <div v-else class="search-empty-state">
+              <v-icon size="42" color="grey-lighten-1">mdi-magnify</v-icon>
+              <p>Nhập tên chức năng, độc giả, tài liệu hoặc mã phiếu để tìm.</p>
+            </div>
+          </v-card>
+        </v-menu>
+
+        <!-- THÔNG BÁO -->
+        <v-menu
+          v-model="notificationMenu"
+          location="bottom end"
+          offset="10"
+          :close-on-content-click="false"
+        >
+          <template #activator="{ props }">
+            <v-badge
+              :content="unreadNotificationCount"
+              :model-value="unreadNotificationCount > 0"
+              color="red"
+              offset-x="8"
+              offset-y="8"
+              class="mr-4"
+            >
+              <v-btn
+                v-bind="props"
+                icon="mdi-bell-outline"
+                variant="outlined"
+                color="grey-darken-1"
+                bg-color="white"
+                size="40"
+                class="rounded-circle bg-white notification-btn"
+              />
+            </v-badge>
+          </template>
+
+          <v-card class="notification-menu-card" elevation="10">
+            <div class="notification-head">
+              <div>
+                <h3>Thông báo</h3>
+                <p>{{ unreadNotificationCount }} thông báo chưa đọc</p>
+              </div>
+
+              <button @click="markAllNotificationsRead">Đánh dấu đã đọc</button>
+            </div>
+
+            <div class="notification-list">
+              <button
+                v-for="item in headerNotifications"
+                :key="item.id"
+                class="notification-item"
+                :class="{ unread: !item.read }"
+                @click="openNotification(item)"
+              >
+                <span class="noti-icon" :style="{ background: item.bg, color: item.color }">
+                  <v-icon size="22">{{ item.icon }}</v-icon>
+                </span>
+
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.message }}</p>
+                  <small>{{ item.time }}</small>
+                </div>
+              </button>
+            </div>
+
+            <v-divider />
+
+            <button class="notification-footer" @click="currentMenu = 'notifications'; notificationMenu = false">
+              Xem tất cả thông báo
+              <v-icon size="18">mdi-arrow-right</v-icon>
+            </button>
+          </v-card>
+        </v-menu>
+
+        <!-- AVATAR MENU -->
+        <v-menu
+          v-model="avatarMenu"
+          location="bottom end"
+          offset="10"
+          :close-on-content-click="false"
+        >
+          <template #activator="{ props }">
+            <button v-bind="props" class="avatar-menu-btn" type="button">
+              <v-avatar size="40" color="#ccfbf1" class="border admin-head-avatar">
+                <v-icon color="#0d9488" size="25">mdi-account</v-icon>
+              </v-avatar>
+              <v-icon size="18" color="grey-darken-1">mdi-chevron-down</v-icon>
+            </button>
+          </template>
+
+          <v-card class="account-menu-card" elevation="10">
+            <div class="account-menu-head">
+              <v-avatar size="54" color="#ccfbf1" class="admin-head-avatar">
+                <v-icon color="#0d9488" size="31">mdi-account</v-icon>
+              </v-avatar>
+
+              <div>
+                <h4>{{ adminProfile.name }}</h4>
+                <p>{{ adminProfile.email }}</p>
+              </div>
+            </div>
+
+            <v-divider />
+
+            <button class="account-menu-item" @click="openProfileDialog">
+              <v-icon size="21">mdi-account-circle-outline</v-icon>
+              Hồ sơ cá nhân
+            </button>
+
+            <button class="account-menu-item" @click="goToSettings">
+              <v-icon size="21">mdi-cog-outline</v-icon>
+              Cài đặt tài khoản
+            </button>
+
+            <button class="account-menu-item" @click="currentMenu = 'notifications'; avatarMenu = false">
+              <v-icon size="21">mdi-bell-outline</v-icon>
+              Thông báo của tôi
+            </button>
+
+            <v-divider />
+
+            <button class="account-menu-item logout" @click="logoutUser">
+              <v-icon size="21">mdi-logout</v-icon>
+              Đăng xuất
+            </button>
+          </v-card>
+        </v-menu>
       </div>
     </v-app-bar>
+
+    <!-- PROFILE DIALOG -->
+    <v-dialog v-model="profileDialog" max-width="720">
+      <v-card class="profile-dialog-card" elevation="0">
+        <div class="profile-dialog-cover"></div>
+
+        <div class="profile-dialog-body">
+          <div class="profile-dialog-head">
+            <v-avatar size="96" color="#ccfbf1" class="profile-dialog-avatar admin-head-avatar">
+              <v-icon color="#0d9488" size="58">mdi-account</v-icon>
+            </v-avatar>
+
+            <div class="flex-grow-1">
+              <h2>{{ adminProfile.name }}</h2>
+              <p>{{ adminProfile.role }} - {{ adminProfile.service }}</p>
+            </div>
+
+            <v-btn icon="mdi-close" variant="text" @click="profileDialog = false" />
+          </div>
+
+          <div class="profile-info-grid">
+            <div>
+              <span>Email</span>
+              <strong>{{ adminProfile.email }}</strong>
+            </div>
+
+            <div>
+              <span>Số điện thoại</span>
+              <strong>{{ adminProfile.phone }}</strong>
+            </div>
+
+            <div>
+              <span>Vai trò</span>
+              <strong>{{ adminProfile.role }}</strong>
+            </div>
+
+            <div>
+              <span>Trạng thái</span>
+              <strong class="text-teal-darken-2">Đang hoạt động</strong>
+            </div>
+
+            <div>
+              <span>Dịch vụ phụ trách</span>
+              <strong>{{ adminProfile.service }}</strong>
+            </div>
+
+            <div>
+              <span>Đăng nhập gần nhất</span>
+              <strong>{{ adminProfile.lastLogin }}</strong>
+            </div>
+          </div>
+
+          <div class="profile-dialog-actions">
+            <v-btn
+              variant="outlined"
+              color="#0d9488"
+              class="text-none font-weight-bold"
+              prepend-icon="mdi-cog-outline"
+              @click="goToSettings"
+            >
+              Cài đặt tài khoản
+            </v-btn>
+
+            <v-btn
+              color="red"
+              variant="outlined"
+              class="text-none font-weight-bold"
+              prepend-icon="mdi-logout"
+              @click="logoutUser"
+            >
+              Đăng xuất
+            </v-btn>
+          </div>
+        </div>
+      </v-card>
+    </v-dialog>
 
     <!-- MAIN -->
     <v-main style="height: calc(100vh - 75px); overflow-y: auto;">
       <v-container fluid class="px-6 py-2" style="max-width: 1600px;">
         <!-- ================= TỔNG QUAN ================= -->
-        <div v-if="currentMenu === 'overview'">
-          <v-row class="mb-2">
-            <v-col
-              v-for="(kpi, i) in kpiData"
-              :key="i"
-              cols="12"
-              sm="6"
-              md="3"
-            >
-              <v-card class="pa-4 rounded-xl border d-flex align-center h-100" elevation="0">
-                <v-avatar :color="kpi.color" size="56" class="mr-4 rounded-circle flex-shrink-0">
-                  <v-icon color="white" size="28">{{ kpi.icon }}</v-icon>
-                </v-avatar>
-
-                <div class="flex-grow-1">
-                  <div class="text-caption font-weight-bold text-grey-darken-3 mb-0">
-                    {{ kpi.title }}
-                  </div>
-
-                  <div
-                    class="text-h5 font-weight-black mb-0"
-                    :style="{ color: kpi.valueColor }"
-                  >
-                    {{ kpi.value }}
-                  </div>
-
-                  <div
-                    class="text-caption font-weight-medium text-green-darken-2"
-                    style="font-size: 0.7rem !important;"
-                  >
-                    <v-icon size="12">mdi-arrow-top-right</v-icon>
-                    {{ kpi.trend }} so với tháng trước
-                  </div>
+        <div v-if="currentMenu === 'overview'" class="overview-v3">
+          <!-- KPI CARDS -->
+          <v-row class="mb-4 overview-kpi-row">
+            <v-col v-for="kpi in overviewKpis" :key="kpi.title" cols="12" sm="6" lg="3">
+              <div class="overview-kpi-card">
+                <div class="overview-kpi-icon" :style="{ background: kpi.bg }">
+                  <v-icon :color="kpi.color" size="34">{{ kpi.icon }}</v-icon>
                 </div>
-              </v-card>
+
+                <div class="overview-kpi-info">
+                  <p>{{ kpi.title }}</p>
+                  <h2 :style="{ color: kpi.color }">{{ kpi.value }}</h2>
+
+                  <span :class="{ down: kpi.down }">
+                    <v-icon size="15">{{ kpi.down ? 'mdi-arrow-down-right' : 'mdi-arrow-up-right' }}</v-icon>
+                    {{ kpi.trend }}
+                  </span>
+                </div>
+              </div>
             </v-col>
           </v-row>
 
-          <v-row class="mb-2">
-            <v-col cols="12" md="8">
-              <v-card class="pa-5 rounded-xl border h-100" elevation="0">
-                <div class="d-flex justify-space-between align-center mb-4">
-                  <h3 class="text-subtitle-1 font-weight-bold text-grey-darken-4">
-                    Lưu lượng Mượn - Trả trong 7 ngày qua
-                  </h3>
-                </div>
-
-                <div class="chart-wrapper d-flex">
-                  <div
-                    class="y-axis d-flex flex-column justify-space-between text-caption text-grey-lighten-1 pr-3 pb-5 font-weight-medium"
-                    style="font-size: 0.7rem !important;"
-                  >
-                    <span>500</span>
-                    <span>400</span>
-                    <span>300</span>
-                    <span>200</span>
-                    <span>100</span>
-                    <span>0</span>
+          <!-- MAIN CHARTS -->
+          <v-row class="mb-4">
+            <!-- LINE CHART -->
+            <v-col cols="12" lg="6">
+              <div class="overview-panel chart-panel">
+                <div class="overview-panel-head">
+                  <div class="d-flex align-center">
+                    <v-icon color="#0d9488" size="24" class="mr-2">mdi-chart-line</v-icon>
+                    <h3>Lưu lượng mượn - trả trong 7 ngày qua</h3>
                   </div>
 
-                  <div class="css-bar-chart-container flex-grow-1 position-relative">
-                    <div class="grid-lines">
-                      <div v-for="n in 6" :key="n" class="grid-line"></div>
+                  <select v-model="overviewChartRange" class="overview-small-select">
+                    <option>7 ngày qua</option>
+                    <option>Tháng này</option>
+                  </select>
+                </div>
+
+                <div class="overview-line-chart">
+                  <svg viewBox="0 0 700 270" preserveAspectRatio="none">
+                    <line v-for="line in 6" :key="line" x1="0" :y1="line * 42" x2="700" :y2="line * 42" stroke="#eef2f7" stroke-width="1" />
+
+                    <polyline :points="overviewBorrowPolyline" fill="none" stroke="#0d9488" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                    <polyline :points="overviewReturnPolyline" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+
+                    <g v-for="point in overviewBorrowPoints" :key="`borrow-${point.day}`">
+                      <circle :cx="point.x" :cy="point.y" r="7" fill="#0d9488" stroke="#ffffff" stroke-width="4" />
+                      <text :x="point.x" :y="point.y - 16" text-anchor="middle" fill="#0d9488" font-size="20" font-weight="800">
+                        {{ point.value }}
+                      </text>
+                    </g>
+
+                    <g v-for="point in overviewReturnPoints" :key="`return-${point.day}`">
+                      <circle :cx="point.x" :cy="point.y" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="4" />
+                      <text :x="point.x" :y="point.y + 30" text-anchor="middle" fill="#2563eb" font-size="20" font-weight="800">
+                        {{ point.value }}
+                      </text>
+                    </g>
+                  </svg>
+
+                  <div class="overview-x-labels">
+                    <span v-for="item in overviewBorrowReturn" :key="item.day">{{ item.day }}</span>
+                  </div>
+                </div>
+
+                <div class="overview-chart-legend">
+                  <span><i class="borrow"></i>Lượt mượn</span>
+                  <span><i class="return"></i>Lượt trả</span>
+                </div>
+              </div>
+            </v-col>
+
+            <!-- DONUT -->
+            <v-col cols="12" lg="3">
+              <div class="overview-panel overview-status-panel">
+                <div class="overview-panel-head">
+                  <div class="d-flex align-center">
+                    <v-icon color="#0d9488" size="24" class="mr-2">mdi-chart-donut</v-icon>
+                    <h3>Tỷ lệ trạng thái mượn trả</h3>
+                  </div>
+                </div>
+
+                <div class="overview-donut-wrap">
+                  <div class="overview-donut" :style="{ background: overviewDonutBg }">
+                    <div class="overview-donut-hole">
+                      <span>Tổng số</span>
+                      <strong>{{ overviewStatusTotal }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="overview-donut-list">
+                    <div v-for="item in overviewStatusStats" :key="item.label">
+                      <span>
+                        <i :style="{ background: item.color }"></i>
+                        {{ item.label }}
+                      </span>
+                      <b>{{ item.value }} ({{ overviewPercent(item.value) }}%)</b>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="overview-link-btn" @click="currentMenu = 'reports'">
+                  Xem chi tiết báo cáo
+                  <v-icon size="18">mdi-arrow-right</v-icon>
+                </button>
+              </div>
+            </v-col>
+
+            <!-- OVERDUE -->
+            <v-col cols="12" lg="3">
+              <div class="overview-panel">
+                <div class="overview-panel-head">
+                  <div class="d-flex align-center">
+                    <v-icon color="#ef4444" size="24" class="mr-2">mdi-alert-outline</v-icon>
+                    <h3>Cảnh báo quá hạn</h3>
+                  </div>
+
+                  <button class="overview-text-link" @click="currentMenu = 'history'">Xem tất cả</button>
+                </div>
+
+                <div class="overview-alert-list">
+                  <div v-for="alert in overviewFilteredOverdues" :key="alert.name" class="overview-alert-item">
+                    <v-avatar size="44" class="mr-3">
+                      <v-img :src="alert.avatar" />
+                    </v-avatar>
+
+                    <div class="flex-grow-1">
+                      <strong>{{ alert.name }}</strong>
+                      <span>{{ alert.book }}</span>
                     </div>
 
-                    <div class="bars-area">
-                      <div
-                        v-for="(day, index) in barChartData"
-                        :key="index"
-                        class="bar-group"
-                      >
-                        <div class="bars">
-                          <div
-                            class="bar borrow-bar"
-                            :style="{ height: (day.borrow / 500 * 100) + '%' }"
-                          >
-                            <span class="bar-value">{{ day.borrow }}</span>
-                          </div>
+                    <b>Trễ {{ alert.days }} ngày</b>
+                  </div>
+                </div>
+              </div>
+            </v-col>
+          </v-row>
 
-                          <div
-                            class="bar return-bar"
-                            :style="{ height: (day.return / 500 * 100) + '%' }"
-                          >
-                            <span class="bar-value">{{ day.return }}</span>
-                          </div>
-                        </div>
+          <!-- LOWER GRID -->
+          <v-row>
+            <!-- TOP BOOKS -->
+            <v-col cols="12" lg="4">
+              <div class="overview-panel lower-panel">
+                <div class="overview-panel-head">
+                  <div class="d-flex align-center">
+                    <v-icon color="#0d9488" size="24" class="mr-2">mdi-trophy-outline</v-icon>
+                    <h3>Top 5 sách được mượn nhiều</h3>
+                  </div>
 
-                        <div class="day-label">{{ day.label }}</div>
+                  <button class="overview-text-link" @click="currentMenu = 'reports'">Xem tất cả</button>
+                </div>
+
+                <div class="overview-book-list">
+                  <div v-for="book in overviewFilteredTopBooks" :key="book.title" class="overview-book-row">
+                    <span class="rank-badge" :class="`rank-${book.rank}`">{{ book.rank }}</span>
+
+                    <img :src="book.cover" :alt="book.title" />
+
+                    <div class="flex-grow-1">
+                      <strong>{{ book.title }}</strong>
+                      <span>{{ book.author }}</span>
+                      <div class="book-progress">
+                        <i :style="{ width: book.percent + '%', background: book.color }"></i>
                       </div>
                     </div>
+
+                    <b>{{ book.count }}</b>
                   </div>
                 </div>
-              </v-card>
+              </div>
             </v-col>
 
-            <v-col cols="12" md="4">
-              <v-card class="pa-5 rounded-xl border h-100 d-flex flex-column" elevation="0">
-                <h3 class="text-subtitle-1 font-weight-bold text-grey-darken-4 mb-4">
-                  Tình trạng Thẻ Độc giả
-                </h3>
-
-                <div class="d-flex align-center justify-center my-auto">
-                  <div class="css-donut-chart mr-4">
-                    <div class="donut-hole d-flex flex-column align-center justify-center">
-                      <span class="text-h5 font-weight-black text-grey-darken-4">
-                        3,920
-                      </span>
-                    </div>
+            <!-- CATEGORY STATS -->
+            <v-col cols="12" lg="4">
+              <div class="overview-panel lower-panel">
+                <div class="overview-panel-head">
+                  <div class="d-flex align-center">
+                    <v-icon color="#0d9488" size="24" class="mr-2">mdi-shape-outline</v-icon>
+                    <h3>Thống kê theo loại tài liệu</h3>
                   </div>
 
-                  <div>
-                    <div class="text-caption font-weight-bold text-grey-darken-4 mb-1">
-                      <v-icon color="#0d9488" size="10" class="mr-2">mdi-circle</v-icon>
-                      Hoạt động: 87%
+                  <button class="overview-text-link" @click="currentMenu = 'reports'">Xem tất cả</button>
+                </div>
+
+                <div class="overview-category-list">
+                  <div v-for="cat in overviewCategories" :key="cat.name">
+                    <div class="category-head">
+                      <strong>{{ cat.name }}</strong>
+                      <span>{{ cat.count }} tài liệu</span>
                     </div>
 
-                    <div class="text-caption font-weight-bold text-grey-darken-4">
-                      <v-icon color="#ef4444" size="10" class="mr-2">mdi-circle</v-icon>
-                      Bị khóa: 13%
+                    <div class="category-progress">
+                      <i :style="{ width: cat.percent + '%', background: cat.color }"></i>
+                    </div>
+
+                    <small>{{ cat.percent }}%</small>
+                  </div>
+                </div>
+              </div>
+            </v-col>
+
+            <!-- ACTIVITY + QUICK ACTIONS -->
+            <v-col cols="12" lg="4">
+              <div class="overview-panel lower-panel">
+                <div class="overview-panel-head">
+                  <div class="d-flex align-center">
+                    <v-icon color="#0d9488" size="24" class="mr-2">mdi-timeline-clock-outline</v-icon>
+                    <h3>Lịch sử hoạt động gần đây</h3>
+                  </div>
+
+                  <button class="overview-text-link" @click="showOverviewActivities">Xem tất cả</button>
+                </div>
+
+                <div class="overview-timeline">
+                  <div v-for="item in overviewActivities" :key="item.time + item.title">
+                    <span>{{ item.time }}</span>
+                    <i></i>
+                    <div>
+                      <strong>{{ item.title }}</strong>
+                      <p>{{ item.desc }}</p>
                     </div>
                   </div>
                 </div>
-              </v-card>
-            </v-col>
-          </v-row>
 
-          <v-row>
-            <v-col cols="12" md="5">
-              <v-card class="pa-4 rounded-xl border" elevation="0">
-                <h3 class="text-subtitle-2 font-weight-bold mb-3">
-                  Top 5 tài liệu mượn nhiều nhất
-                </h3>
-
-                <v-table density="compact" class="table-custom">
-                  <tbody>
-                    <tr v-for="(book, i) in topBooks" :key="i">
-                      <td>{{ i + 1 }}</td>
-                      <td class="font-weight-bold py-2">{{ book.title }}</td>
-                      <td class="text-right font-weight-black text-teal-darken-2">
-                        {{ book.borrows }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-card>
-            </v-col>
-
-            <v-col cols="12" md="7">
-              <v-card class="pa-4 rounded-xl border" elevation="0">
-                <h3 class="text-subtitle-2 font-weight-bold mb-3">
-                  Độc giả trễ hạn khẩn cấp
-                </h3>
-
-                <v-table density="compact" class="table-custom">
-                  <tbody>
-                    <tr v-for="(user, i) in overdueUsers" :key="i">
-                      <td class="font-weight-bold">{{ user.name }}</td>
-                      <td>{{ user.book }}</td>
-                      <td>
-                        <v-chip
-                          color="red-lighten-5"
-                          text-color="red-darken-1"
-                          size="x-small"
-                          class="font-weight-bold"
-                        >
-                          Trễ {{ user.days }} ngày
-                        </v-chip>
-                      </td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-card>
+                <div class="overview-quick-actions">
+                  <button v-for="action in overviewQuickActions" :key="action.title" @click="runOverviewAction(action)">
+                    <span :style="{ background: action.bg, color: action.color }">
+                      <v-icon size="24">{{ action.icon }}</v-icon>
+                    </span>
+                    <b>{{ action.title }}</b>
+                  </button>
+                </div>
+              </div>
             </v-col>
           </v-row>
         </div>
+
 
         <!-- ================= HỒ SƠ ĐỘC GIẢ ================= -->
         <div v-if="currentMenu === 'readers'">
@@ -1652,41 +1989,399 @@
           </v-card>
         </section>
 
-        <section v-if="currentMenu === 'notifications'"><v-card class="pa-10 text-center rounded-xl border mt-4" elevation="0">
-            <v-icon size="64" color="teal-lighten-4" class="mb-4">mdi-bell-ring</v-icon>
-            <h3 class="text-h5 font-weight-bold text-grey-darken-3">Trung tâm Thông báo</h3>
-          </v-card>
+        <section v-if="currentMenu === 'notifications'" class="notification-v2-page">
+          <!-- HERO -->
+          <div class="notification-hero-v2">
+            <div class="bell-illustration-v2">
+              <div class="bell-circle-v2">
+                <v-icon size="66">mdi-bell-ring-outline</v-icon>
+              </div>
+              <span class="spark s1"></span>
+              <span class="spark s2"></span>
+              <span class="spark s3"></span>
+            </div>
+
+            <div class="notification-hero-content-v2">
+              <h2>Trung tâm Thông báo</h2>
+              <p>Quản lý và theo dõi tất cả thông báo, cảnh báo quá hạn, sự kiện mượn trả và đồng bộ hệ thống.</p>
+            </div>
+
+            <div class="notification-hero-side-v2">
+              <div>
+                <v-icon size="22">mdi-clock-time-four-outline</v-icon>
+                <span>Cập nhật lần cuối</span>
+                <strong>{{ notificationLastUpdated }}</strong>
+              </div>
+
+              <label class="auto-refresh-toggle-v2">
+                <span>Tự động làm mới</span>
+                <input v-model="autoRefreshNotification" type="checkbox" />
+                <i></i>
+              </label>
+            </div>
+          </div>
+
+          <!-- STATS -->
+          <div class="notification-stat-grid-v2">
+            <button class="notification-stat-card-v2" @click="notificationTab = 'unread'">
+              <span class="stat-icon blue"><v-icon size="32">mdi-bell-outline</v-icon></span>
+              <div>
+                <p>Chưa đọc</p>
+                <h3>{{ unreadNotificationCount }}</h3>
+                <small>Thông báo mới</small>
+              </div>
+            </button>
+
+            <button class="notification-stat-card-v2" @click="notificationTab = 'overdue'">
+              <span class="stat-icon red"><v-icon size="32">mdi-alert-outline</v-icon></span>
+              <div>
+                <p>Quá hạn</p>
+                <h3>{{ overdueNotificationCount }}</h3>
+                <small>Cần xử lý ngay</small>
+              </div>
+            </button>
+
+            <button class="notification-stat-card-v2" @click="notificationTab = 'system'">
+              <span class="stat-icon teal"><v-icon size="32">mdi-cog-outline</v-icon></span>
+              <div>
+                <p>Hệ thống</p>
+                <h3>{{ systemNotificationCount }}</h3>
+                <small>Thông báo hệ thống</small>
+              </div>
+            </button>
+
+            <button class="notification-stat-card-v2" @click="notificationTab = 'done'">
+              <span class="stat-icon green"><v-icon size="32">mdi-check-circle-outline</v-icon></span>
+              <div>
+                <p>Đã xử lý</p>
+                <h3>{{ handledNotificationCount }}</h3>
+                <small>Trong 30 ngày qua</small>
+              </div>
+            </button>
+          </div>
+
+          <div class="notification-layout-v2">
+            <!-- LEFT -->
+            <div class="notification-left-v2">
+              <div class="notification-toolbar-v2">
+                <div class="notification-tabs-v2">
+                  <button
+                    v-for="tab in notificationTabs"
+                    :key="tab.value"
+                    :class="{ active: notificationTab === tab.value }"
+                    @click="notificationTab = tab.value"
+                  >
+                    {{ tab.label }}
+                    <b v-if="tab.count > 0">{{ tab.count }}</b>
+                  </button>
+                </div>
+
+                <div class="notification-filter-v2">
+                  <div class="notification-search-v2">
+                    <v-icon size="20">mdi-magnify</v-icon>
+                    <input v-model="notificationSearch" placeholder="Tìm thông báo..." />
+                  </div>
+
+                  <select v-model="notificationTypeFilter">
+                    <option value="all">Tất cả loại thông báo</option>
+                    <option value="borrow">Mượn trả</option>
+                    <option value="reader">Độc giả</option>
+                    <option value="card">Thẻ thư viện</option>
+                    <option value="report">Báo cáo</option>
+                    <option value="system">Hệ thống</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="notification-action-bar-v2">
+                <div>
+                  <input
+                    type="checkbox"
+                    :checked="isAllPagedNotificationsSelected"
+                    @change="toggleAllNotifications"
+                  />
+                  <span>Danh sách thông báo</span>
+                </div>
+
+                <div class="notification-actions-v2">
+                  <button @click="openNotificationCreate">
+                    <v-icon size="18">mdi-plus</v-icon>
+                    Tạo thông báo
+                  </button>
+
+                  <button @click="markSelectedNotificationsRead" :disabled="notificationSelectedIds.length === 0">
+                    <v-icon size="18">mdi-check-all</v-icon>
+                    Đánh dấu đã đọc
+                  </button>
+
+                  <button @click="deleteSelectedNotifications" :disabled="notificationSelectedIds.length === 0" class="danger">
+                    <v-icon size="18">mdi-delete-outline</v-icon>
+                    Xóa
+                  </button>
+
+                  <button @click="exportNotificationsCsv">
+                    <v-icon size="18">mdi-file-excel-outline</v-icon>
+                    Xuất Excel
+                  </button>
+                </div>
+              </div>
+
+              <div class="notification-list-v2">
+                <div
+                  v-for="item in pagedNotifications"
+                  :key="item.id"
+                  class="notification-row-v2"
+                  :class="{ unread: !item.read, active: selectedNotification?.id === item.id }"
+                  @click="selectNotification(item)"
+                >
+                  <input
+                    v-model="notificationSelectedIds"
+                    :value="item.id"
+                    type="checkbox"
+                    @click.stop
+                  />
+
+                  <span class="read-dot" :class="{ read: item.read }"></span>
+
+                  <div class="notification-icon-v2" :style="{ background: item.bg, color: item.color }">
+                    <v-icon size="28">{{ item.icon }}</v-icon>
+                  </div>
+
+                  <div class="notification-main-v2">
+                    <div>
+                      <h4>{{ item.title }}</h4>
+                      <span class="notification-time-v2">{{ item.time }}</span>
+                    </div>
+
+                    <p>{{ item.message }}</p>
+
+                    <div class="notification-meta-v2">
+                      <span :class="['priority', item.priority]">{{ notificationPriorityText(item.priority) }}</span>
+                      <span>{{ notificationTypeText(item.type) }}</span>
+                      <span>{{ item.source }}</span>
+                    </div>
+                  </div>
+
+                  <span class="notification-status-chip-v2" :class="item.done ? 'done' : 'pending'">
+                    {{ item.done ? 'Đã xử lý' : 'Cần xử lý' }}
+                  </span>
+                </div>
+
+                <div v-if="pagedNotifications.length === 0" class="notification-empty-v2">
+                  <v-icon size="58" color="grey-lighten-1">mdi-bell-off-outline</v-icon>
+                  <h3>Không có thông báo phù hợp</h3>
+                  <p>Hãy thử đổi bộ lọc hoặc nhập từ khóa khác.</p>
+                </div>
+              </div>
+
+              <div class="notification-pagination-v2">
+                <span>
+                  Hiển thị {{ notificationPageStart }} - {{ notificationPageEnd }}
+                  trong tổng số {{ filteredNotifications.length }} thông báo
+                </span>
+
+                <div>
+                  <button :disabled="notificationPage === 1" @click="notificationPage--">
+                    <v-icon size="18">mdi-chevron-left</v-icon>
+                  </button>
+
+                  <button
+                    v-for="page in notificationTotalPages"
+                    :key="page"
+                    :class="{ active: notificationPage === page }"
+                    @click="notificationPage = page"
+                  >
+                    {{ page }}
+                  </button>
+
+                  <button :disabled="notificationPage === notificationTotalPages" @click="notificationPage++">
+                    <v-icon size="18">mdi-chevron-right</v-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="notification-right-v2">
+              <div class="notification-detail-card-v2">
+                <div class="detail-head-v2">
+                  <h3>Chi tiết thông báo</h3>
+                  <button @click="selectedNotification = null">
+                    <v-icon size="20">mdi-close</v-icon>
+                  </button>
+                </div>
+
+                <div v-if="selectedNotification" class="detail-body-v2">
+                  <div class="detail-title-v2">
+                    <span :style="{ background: selectedNotification.bg, color: selectedNotification.color }">
+                      <v-icon size="38">{{ selectedNotification.icon }}</v-icon>
+                    </span>
+
+                    <div>
+                      <h4>{{ selectedNotification.title }}</h4>
+                      <p>
+                        <b :class="['priority-text', selectedNotification.priority]">
+                          {{ notificationPriorityText(selectedNotification.priority) }}
+                        </b>
+                        · {{ selectedNotification.time }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p class="detail-message-v2">{{ selectedNotification.message }}</p>
+
+                  <div class="reader-normal-box-v2">
+                    <span class="normal-person-avatar-v2">
+                      <v-icon size="34">mdi-account</v-icon>
+                    </span>
+
+                    <div>
+                      <strong>{{ selectedNotification.target }}</strong>
+                      <p>{{ selectedNotification.readerCode || 'Tài khoản hệ thống' }}</p>
+                    </div>
+                  </div>
+
+                  <div class="detail-info-grid-v2">
+                    <div>
+                      <span>Loại thông báo</span>
+                      <strong>{{ notificationTypeText(selectedNotification.type) }}</strong>
+                    </div>
+
+                    <div>
+                      <span>Độ ưu tiên</span>
+                      <strong :class="['priority-text', selectedNotification.priority]">
+                        {{ notificationPriorityText(selectedNotification.priority) }}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Nguồn</span>
+                      <strong>{{ selectedNotification.source }}</strong>
+                    </div>
+
+                    <div>
+                      <span>Trạng thái</span>
+                      <strong>{{ selectedNotification.read ? 'Đã đọc' : 'Chưa đọc' }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="detail-actions-v2">
+                    <button @click="goNotificationTarget">
+                      <v-icon size="18">mdi-eye-outline</v-icon>
+                      Xem chi tiết
+                    </button>
+
+                    <button @click="markNotificationRead(selectedNotification)">
+                      <v-icon size="18">mdi-check</v-icon>
+                      Đánh dấu đã đọc
+                    </button>
+
+                    <button class="danger" @click="deleteNotification(selectedNotification)">
+                      <v-icon size="18">mdi-delete-outline</v-icon>
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+
+                <div v-else class="detail-empty-v2">
+                  <v-icon size="62" color="grey-lighten-1">mdi-bell-outline</v-icon>
+                  <p>Chọn một thông báo để xem chi tiết.</p>
+                </div>
+              </div>
+
+              <div class="activity-card-v2">
+                <div class="activity-head-v2">
+                  <h3>Nhật ký hoạt động hệ thống</h3>
+                  <button @click="showAllNotificationActivities">Xem tất cả</button>
+                </div>
+
+                <div class="activity-list-v2">
+                  <div v-for="log in notificationActivityLogs" :key="log.time + log.title" class="activity-item-v2">
+                    <span :style="{ background: log.color }">
+                      <v-icon size="15">{{ log.icon }}</v-icon>
+                    </span>
+
+                    <div>
+                      <b>{{ log.time }}</b>
+                      <h4>{{ log.title }}</h4>
+                      <p>{{ log.desc }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CREATE NOTIFICATION DIALOG -->
+          <v-dialog v-model="notificationCreateDialog" max-width="680">
+            <v-card class="notification-dialog-v2">
+              <div class="dialog-head-v2">
+                <h3>Tạo thông báo mới</h3>
+                <v-btn icon="mdi-close" variant="text" @click="notificationCreateDialog = false" />
+              </div>
+
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="notificationForm.title"
+                    label="Tiêu đề thông báo"
+                    variant="outlined"
+                    color="#0d9488"
+                  />
+                </v-col>
+
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="notificationForm.message"
+                    label="Nội dung thông báo"
+                    variant="outlined"
+                    color="#0d9488"
+                    rows="3"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="notificationForm.type"
+                    :items="notificationTypeOptions"
+                    label="Loại thông báo"
+                    variant="outlined"
+                    color="#0d9488"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="notificationForm.priority"
+                    :items="notificationPriorityOptions"
+                    label="Độ ưu tiên"
+                    variant="outlined"
+                    color="#0d9488"
+                  />
+                </v-col>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="notificationForm.target"
+                    label="Người nhận / đối tượng liên quan"
+                    variant="outlined"
+                    color="#0d9488"
+                  />
+                </v-col>
+              </v-row>
+
+              <div class="dialog-actions-v2">
+                <v-btn variant="outlined" color="grey" @click="notificationCreateDialog = false">
+                  Hủy
+                </v-btn>
+
+                <v-btn color="#0d9488" class="text-white" @click="createNotification">
+                  Gửi thông báo
+                </v-btn>
+              </div>
+            </v-card>
+          </v-dialog>
         </section>
-
-        <section v-if="currentMenu === 'settings'">
-          <v-card class="pa-10 text-center rounded-xl border mt-4" elevation="0">
-            <v-icon size="64" color="teal-lighten-4" class="mb-4">mdi-cog</v-icon>
-            <h3 class="text-h5 font-weight-bold text-grey-darken-3">Cấu hình Hệ thống</h3>
-          </v-card>
-        </section>
-
-        <!-- ================= THÔNG BÁO ================= -->
-        <div v-if="currentMenu === 'notifications'">
-          <v-card class="pa-5 rounded-xl border" elevation="0">
-            <h3 class="text-subtitle-1 font-weight-bold mb-4">
-              Thông báo hệ thống định danh trung tâm
-            </h3>
-
-            <v-list density="comfortable">
-              <v-list-item
-                v-for="n in 3"
-                :key="n"
-                :title="'Cảnh báo vi phạm trễ hạn hệ thống #' + n"
-                subtitle="Độc giả mang mã thẻ LIB-2026-041 giữ sách quá hạn quy định vượt mức 5 ngày."
-                class="border-b mb-1 rounded-lg"
-              >
-                <template #prepend>
-                  <v-icon color="red">mdi-alert-circle-outline</v-icon>
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-card>
-        </div>
 
         <!-- ================= CÀI ĐẶT ================= -->
         <div v-if="currentMenu === 'settings'" class="settings-page">
@@ -2280,6 +2975,620 @@ const currentMenuTitle = computed(() => {
   return menuItems.find((m) => m.value === currentMenu.value)?.title || 'Dashboard'
 })
 
+const searchMenu = ref(false)
+const notificationMenu = ref(false)
+const avatarMenu = ref(false)
+const sidebarUserMenu = ref(false)
+const profileDialog = ref(false)
+
+const adminProfile = ref({
+  name: 'Admin Thư viện',
+  role: 'Quản trị hệ thống',
+  service: 'Identity & Report Service',
+  email: 'admin@library.com',
+  phone: '024 1234 5678',
+  lastLogin: '15/06/2026 - 14:35',
+  avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=160&q=80'
+})
+
+const headerNotifications = ref([
+  {
+    id: 1,
+    title: 'Cảnh báo: Hạn trả sách đã quá hạn',
+    message: 'Độc giả Nguyễn Văn An đã quá hạn 5 ngày với sách “Lập trình Python cơ bản”.',
+    time: '10:15, 26/04/2026',
+    icon: 'mdi-alert-outline',
+    color: '#ef4444',
+    bg: '#fee2e2',
+    menu: 'history',
+    type: 'borrow',
+    priority: 'high',
+    source: 'Hệ thống mượn trả',
+    target: 'Nguyễn Văn An',
+    readerCode: 'DG-1024',
+    read: false,
+    done: false
+  },
+  {
+    id: 2,
+    title: 'Nhắc nhở: Thẻ độc giả sắp hết hạn',
+    message: 'Thẻ thư viện của độc giả Trần Thị Bình sẽ hết hạn sau 7 ngày.',
+    time: '09:02, 26/04/2026',
+    icon: 'mdi-card-account-details-outline',
+    color: '#f97316',
+    bg: '#ffedd5',
+    menu: 'cards',
+    type: 'card',
+    priority: 'medium',
+    source: 'Identity Service',
+    target: 'Trần Thị Bình',
+    readerCode: 'DG-0897',
+    read: false,
+    done: false
+  },
+  {
+    id: 3,
+    title: 'Trả sách thành công',
+    message: 'Độc giả Lê Minh Đức đã trả sách “Clean Code - Mã sạch”.',
+    time: '16:45, 25/04/2026',
+    icon: 'mdi-book-check-outline',
+    color: '#16a34a',
+    bg: '#dcfce7',
+    menu: 'history',
+    type: 'borrow',
+    priority: 'low',
+    source: 'Circulation Event',
+    target: 'Lê Minh Đức',
+    readerCode: 'DG-0756',
+    read: true,
+    done: true
+  },
+  {
+    id: 4,
+    title: 'Đăng ký độc giả mới',
+    message: 'Độc giả Phạm Hoài Nam đã đăng ký tài khoản thành công.',
+    time: '14:30, 25/04/2026',
+    icon: 'mdi-account-plus-outline',
+    color: '#7c3aed',
+    bg: '#ede9fe',
+    menu: 'readers',
+    type: 'reader',
+    priority: 'medium',
+    source: 'Identity Service',
+    target: 'Phạm Hoài Nam',
+    readerCode: 'DG-1123',
+    read: false,
+    done: true
+  },
+  {
+    id: 5,
+    title: 'Báo cáo thống kê đã tạo xong',
+    message: 'Báo cáo “Tình hình mượn sách tháng 04/2026” đã được tạo thành công.',
+    time: '11:05, 25/04/2026',
+    icon: 'mdi-chart-bar',
+    color: '#eab308',
+    bg: '#fef3c7',
+    menu: 'reports',
+    type: 'report',
+    priority: 'low',
+    source: 'Report Service',
+    target: 'Admin Thư viện',
+    readerCode: '',
+    read: true,
+    done: true
+  },
+  {
+    id: 6,
+    title: 'Đồng bộ dữ liệu hoàn tất',
+    message: 'Đồng bộ dữ liệu từ máy chủ 192.168.1.10 hoàn tất lúc 08:00.',
+    time: '08:00, 25/04/2026',
+    icon: 'mdi-sync-circle',
+    color: '#2563eb',
+    bg: '#dbeafe',
+    menu: 'reports',
+    type: 'system',
+    priority: 'low',
+    source: 'RabbitMQ Consumer',
+    target: 'Hệ thống báo cáo',
+    readerCode: '',
+    read: true,
+    done: true
+  },
+  {
+    id: 7,
+    title: 'Cập nhật hệ thống',
+    message: 'Hệ thống đã cập nhật lên phiên bản 2.3.1 thành công.',
+    time: '07:30, 25/04/2026',
+    icon: 'mdi-shield-check-outline',
+    color: '#0d9488',
+    bg: '#ccfbf1',
+    menu: 'settings',
+    type: 'system',
+    priority: 'low',
+    source: 'System Core',
+    target: 'Toàn hệ thống',
+    readerCode: '',
+    read: true,
+    done: true
+  }
+])
+
+const unreadNotificationCount = computed(() => {
+  return headerNotifications.value.filter((item) => !item.read).length
+})
+
+const notificationSearch = ref('')
+const notificationTab = ref('all')
+const notificationTypeFilter = ref('all')
+const notificationPage = ref(1)
+const notificationPageSize = ref(7)
+const notificationSelectedIds = ref([])
+const selectedNotification = ref(headerNotifications.value[0])
+const autoRefreshNotification = ref(true)
+const notificationCreateDialog = ref(false)
+const notificationLastUpdated = ref('10:24, 26/04/2026')
+
+const notificationTypeOptions = ['Mượn trả', 'Độc giả', 'Thẻ thư viện', 'Báo cáo', 'Hệ thống']
+const notificationPriorityOptions = ['Cao', 'Trung bình', 'Thấp']
+
+const notificationForm = ref({
+  title: '',
+  message: '',
+  type: 'Hệ thống',
+  priority: 'Trung bình',
+  target: ''
+})
+
+const notificationActivityLogs = ref([
+  {
+    time: '10:24',
+    title: 'Hệ thống gửi 3 thông báo mới',
+    desc: 'Đến 2 độc giả',
+    icon: 'mdi-check',
+    color: '#10b981'
+  },
+  {
+    time: '10:00',
+    title: 'Đồng bộ dữ liệu hoàn tất',
+    desc: 'Từ máy chủ 192.168.1.10',
+    icon: 'mdi-sync',
+    color: '#2563eb'
+  },
+  {
+    time: '09:30',
+    title: 'Báo cáo tự động đã được tạo',
+    desc: 'Tình hình mượn sách ngày 26/04/2026',
+    icon: 'mdi-chart-bar',
+    color: '#7c3aed'
+  }
+])
+
+const overdueNotificationCount = computed(() => {
+  return headerNotifications.value.filter((item) => item.priority === 'high' || item.title.toLowerCase().includes('quá hạn')).length
+})
+
+const systemNotificationCount = computed(() => {
+  return headerNotifications.value.filter((item) => item.type === 'system').length
+})
+
+const handledNotificationCount = computed(() => {
+  return headerNotifications.value.filter((item) => item.done).length
+})
+
+const notificationTabs = computed(() => [
+  { label: 'Tất cả', value: 'all', count: headerNotifications.value.length },
+  { label: 'Chưa đọc', value: 'unread', count: unreadNotificationCount.value },
+  { label: 'Quá hạn', value: 'overdue', count: overdueNotificationCount.value },
+  { label: 'Mượn trả', value: 'borrow', count: headerNotifications.value.filter((item) => item.type === 'borrow').length },
+  { label: 'Hệ thống', value: 'system', count: systemNotificationCount.value }
+])
+
+const filteredNotifications = computed(() => {
+  const keyword = notificationSearch.value.toLowerCase().trim()
+
+  return headerNotifications.value.filter((item) => {
+    const matchKeyword =
+      !keyword ||
+      item.title.toLowerCase().includes(keyword) ||
+      item.message.toLowerCase().includes(keyword) ||
+      item.target.toLowerCase().includes(keyword) ||
+      String(item.readerCode || '').toLowerCase().includes(keyword)
+
+    const matchTab =
+      notificationTab.value === 'all' ||
+      (notificationTab.value === 'unread' && !item.read) ||
+      (notificationTab.value === 'overdue' && (item.priority === 'high' || item.title.toLowerCase().includes('quá hạn'))) ||
+      item.type === notificationTab.value
+
+    const matchType =
+      notificationTypeFilter.value === 'all' ||
+      item.type === notificationTypeFilter.value
+
+    return matchKeyword && matchTab && matchType
+  })
+})
+
+const notificationTotalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredNotifications.value.length / notificationPageSize.value))
+})
+
+const pagedNotifications = computed(() => {
+  const start = (notificationPage.value - 1) * notificationPageSize.value
+  return filteredNotifications.value.slice(start, start + notificationPageSize.value)
+})
+
+const notificationPageStart = computed(() => {
+  if (filteredNotifications.value.length === 0) return 0
+  return (notificationPage.value - 1) * notificationPageSize.value + 1
+})
+
+const notificationPageEnd = computed(() => {
+  return Math.min(notificationPage.value * notificationPageSize.value, filteredNotifications.value.length)
+})
+
+const isAllPagedNotificationsSelected = computed(() => {
+  return pagedNotifications.value.length > 0 &&
+    pagedNotifications.value.every((item) => notificationSelectedIds.value.includes(item.id))
+})
+
+watch([notificationSearch, notificationTab, notificationTypeFilter], () => {
+  notificationPage.value = 1
+})
+
+watch(notificationTotalPages, () => {
+  if (notificationPage.value > notificationTotalPages.value) {
+    notificationPage.value = notificationTotalPages.value
+  }
+})
+
+const notificationTypeText = (type) => {
+  const map = {
+    borrow: 'Mượn trả',
+    reader: 'Độc giả',
+    card: 'Thẻ thư viện',
+    report: 'Báo cáo',
+    system: 'Hệ thống'
+  }
+
+  return map[type] || 'Hệ thống'
+}
+
+const notificationPriorityText = (priority) => {
+  const map = {
+    high: 'Cao',
+    medium: 'Trung bình',
+    low: 'Thấp'
+  }
+
+  return map[priority] || 'Trung bình'
+}
+
+const mapNotificationType = (type) => {
+  const map = {
+    'Mượn trả': 'borrow',
+    'Độc giả': 'reader',
+    'Thẻ thư viện': 'card',
+    'Báo cáo': 'report',
+    'Hệ thống': 'system'
+  }
+
+  return map[type] || 'system'
+}
+
+const mapNotificationPriority = (priority) => {
+  const map = {
+    'Cao': 'high',
+    'Trung bình': 'medium',
+    'Thấp': 'low'
+  }
+
+  return map[priority] || 'medium'
+}
+
+const notificationIconByType = (type) => {
+  const map = {
+    borrow: 'mdi-book-clock-outline',
+    reader: 'mdi-account-plus-outline',
+    card: 'mdi-card-account-details-outline',
+    report: 'mdi-chart-bar',
+    system: 'mdi-cog-outline'
+  }
+
+  return map[type] || 'mdi-bell-outline'
+}
+
+const notificationColorByPriority = (priority) => {
+  if (priority === 'high') return { color: '#ef4444', bg: '#fee2e2' }
+  if (priority === 'medium') return { color: '#f97316', bg: '#ffedd5' }
+  return { color: '#0d9488', bg: '#ccfbf1' }
+}
+
+const selectNotification = (item) => {
+  selectedNotification.value = item
+  item.read = true
+}
+
+const markNotificationRead = (item) => {
+  if (!item) return
+  item.read = true
+  addNotificationLog('Đánh dấu thông báo đã đọc', item.title, 'mdi-check', '#10b981')
+}
+
+const toggleAllNotifications = () => {
+  if (isAllPagedNotificationsSelected.value) {
+    notificationSelectedIds.value = notificationSelectedIds.value.filter((id) => {
+      return !pagedNotifications.value.some((item) => item.id === id)
+    })
+  } else {
+    const ids = pagedNotifications.value.map((item) => item.id)
+    notificationSelectedIds.value = Array.from(new Set([...notificationSelectedIds.value, ...ids]))
+  }
+}
+
+const markSelectedNotificationsRead = () => {
+  if (notificationSelectedIds.value.length === 0) return
+
+  headerNotifications.value.forEach((item) => {
+    if (notificationSelectedIds.value.includes(item.id)) {
+      item.read = true
+    }
+  })
+
+  addNotificationLog(`Đánh dấu ${notificationSelectedIds.value.length} thông báo đã đọc`, 'Cập nhật từ chọn nhiều', 'mdi-check-all', '#10b981')
+  notificationSelectedIds.value = []
+}
+
+const deleteNotification = (item) => {
+  if (!item) return
+
+  const ok = confirm(`Bạn muốn xóa thông báo "${item.title}"?`)
+  if (!ok) return
+
+  headerNotifications.value = headerNotifications.value.filter((n) => n.id !== item.id)
+
+  if (selectedNotification.value?.id === item.id) {
+    selectedNotification.value = headerNotifications.value[0] || null
+  }
+
+  addNotificationLog('Xóa thông báo', item.title, 'mdi-delete-outline', '#ef4444')
+}
+
+const deleteSelectedNotifications = () => {
+  if (notificationSelectedIds.value.length === 0) return
+
+  const ok = confirm(`Bạn muốn xóa ${notificationSelectedIds.value.length} thông báo đã chọn?`)
+  if (!ok) return
+
+  headerNotifications.value = headerNotifications.value.filter((item) => !notificationSelectedIds.value.includes(item.id))
+  selectedNotification.value = headerNotifications.value[0] || null
+
+  addNotificationLog(`Xóa ${notificationSelectedIds.value.length} thông báo`, 'Cập nhật từ chọn nhiều', 'mdi-delete-outline', '#ef4444')
+  notificationSelectedIds.value = []
+}
+
+const goNotificationTarget = () => {
+  if (!selectedNotification.value) return
+  currentMenu.value = selectedNotification.value.menu
+}
+
+const openNotificationCreate = () => {
+  notificationForm.value = {
+    title: '',
+    message: '',
+    type: 'Hệ thống',
+    priority: 'Trung bình',
+    target: ''
+  }
+
+  notificationCreateDialog.value = true
+}
+
+const createNotification = () => {
+  if (!notificationForm.value.title || !notificationForm.value.message) {
+    alert('Vui lòng nhập tiêu đề và nội dung thông báo.')
+    return
+  }
+
+  const type = mapNotificationType(notificationForm.value.type)
+  const priority = mapNotificationPriority(notificationForm.value.priority)
+  const colors = notificationColorByPriority(priority)
+
+  const newNotification = {
+    id: Date.now(),
+    title: notificationForm.value.title,
+    message: notificationForm.value.message,
+    time: new Date().toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }),
+    icon: notificationIconByType(type),
+    color: colors.color,
+    bg: colors.bg,
+    menu: type === 'borrow' ? 'history' : type === 'reader' ? 'readers' : type === 'card' ? 'cards' : type === 'report' ? 'reports' : 'settings',
+    type,
+    priority,
+    source: 'Admin Thư viện',
+    target: notificationForm.value.target || 'Toàn hệ thống',
+    readerCode: '',
+    read: false,
+    done: false
+  }
+
+  headerNotifications.value.unshift(newNotification)
+  selectedNotification.value = newNotification
+  notificationCreateDialog.value = false
+
+  addNotificationLog('Tạo thông báo mới', newNotification.title, 'mdi-plus', '#0d9488')
+  alert('Đã tạo thông báo mới.')
+}
+
+const exportNotificationsCsv = () => {
+  const rows = [
+    ['Tiêu đề', 'Nội dung', 'Loại', 'Ưu tiên', 'Đối tượng', 'Nguồn', 'Thời gian', 'Trạng thái đọc', 'Xử lý'],
+    ...filteredNotifications.value.map((item) => [
+      item.title,
+      item.message,
+      notificationTypeText(item.type),
+      notificationPriorityText(item.priority),
+      item.target,
+      item.source,
+      item.time,
+      item.read ? 'Đã đọc' : 'Chưa đọc',
+      item.done ? 'Đã xử lý' : 'Cần xử lý'
+    ])
+  ]
+
+  const csv = rows
+    .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+    .join('\n')
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = 'danh-sach-thong-bao.csv'
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
+
+const refreshNotificationCenter = () => {
+  notificationLastUpdated.value = new Date().toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+
+  addNotificationLog('Làm mới trung tâm thông báo', 'Dữ liệu đã được cập nhật', 'mdi-refresh', '#2563eb')
+}
+
+const showAllNotificationActivities = () => {
+  alert('Đây là nhật ký hoạt động gần đây của trung tâm thông báo.')
+}
+
+const addNotificationLog = (title, desc, icon = 'mdi-bell-outline', color = '#0d9488') => {
+  notificationActivityLogs.value.unshift({
+    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    title,
+    desc,
+    icon,
+    color
+  })
+}
+
+
+const quickSearchResults = computed(() => {
+  const keyword = quickSearch.value.toLowerCase().trim()
+
+  const allResults = [
+    ...menuItems.map((item) => ({
+      id: `menu-${item.value}`,
+      title: item.title,
+      desc: 'Chuyển tới chức năng trong hệ thống',
+      icon: item.icon,
+      menu: item.value,
+      color: '#0d9488',
+      bg: '#ccfbf1'
+    })),
+    {
+      id: 'reader-nguyen-van-manh',
+      title: 'Nguyễn Văn Mạnh',
+      desc: 'Độc giả có phiếu mượn quá hạn',
+      icon: 'mdi-account-alert-outline',
+      menu: 'history',
+      color: '#ef4444',
+      bg: '#fee2e2'
+    },
+    {
+      id: 'book-python',
+      title: 'Lập trình Python cơ bản',
+      desc: 'Tài liệu được mượn nhiều',
+      icon: 'mdi-book-open-page-variant-outline',
+      menu: 'reports',
+      color: '#2563eb',
+      bg: '#dbeafe'
+    },
+    {
+      id: 'card-expiring',
+      title: 'Thẻ thư viện sắp hết hạn',
+      desc: 'Xem danh sách thẻ cần gia hạn',
+      icon: 'mdi-card-account-details-outline',
+      menu: 'cards',
+      color: '#f97316',
+      bg: '#ffedd5'
+    }
+  ]
+
+  if (!keyword) return allResults.slice(0, 6)
+
+  return allResults
+    .filter((item) => {
+      return (
+        item.title.toLowerCase().includes(keyword) ||
+        item.desc.toLowerCase().includes(keyword)
+      )
+    })
+    .slice(0, 8)
+})
+
+const handleQuickSearch = () => {
+  searchMenu.value = true
+
+  if (quickSearchResults.value.length === 1) {
+    openSearchResult(quickSearchResults.value[0])
+  }
+}
+
+const openSearchResult = (result) => {
+  currentMenu.value = result.menu
+  searchMenu.value = false
+}
+
+const openNotification = (item) => {
+  item.read = true
+  selectedNotification.value = item
+  currentMenu.value = 'notifications'
+  notificationMenu.value = false
+}
+
+const markAllNotificationsRead = () => {
+  headerNotifications.value.forEach((item) => {
+    item.read = true
+  })
+
+  notificationMenu.value = false
+  sidebarUserMenu.value = false
+  addNotificationLog('Đánh dấu tất cả thông báo đã đọc', 'Cập nhật từ menu tài khoản', 'mdi-bell-check-outline', '#10b981')
+}
+
+const openProfileDialog = () => {
+  profileDialog.value = true
+  avatarMenu.value = false
+  sidebarUserMenu.value = false
+}
+
+const goToSettings = () => {
+  currentMenu.value = 'settings'
+  profileDialog.value = false
+  avatarMenu.value = false
+  sidebarUserMenu.value = false
+}
+
+const logoutUser = () => {
+  const ok = confirm('Bạn có chắc muốn đăng xuất khỏi hệ thống?')
+  if (!ok) return
+
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  window.location.href = '/login'
+}
+
 const sampleCards = ref([
   { id: 'LIB-2026-001', expiry: '31/12/2026', active: true },
   { id: 'LIB-2026-002', expiry: '15/08/2026', active: true },
@@ -2366,6 +3675,305 @@ const overdueUsers = [
   { name: 'Nguyễn Thu Hà', book: 'Trí tuệ nhân tạo', days: 5 },
   { name: 'Lê Hoàng Nam', book: 'Marketing hiện đại', days: 12 }
 ]
+
+
+// ===================== TỔNG QUAN MỚI =====================
+
+const overviewChartRange = ref('7 ngày qua')
+
+const overviewKpis = ref([
+  {
+    title: 'Tổng số đầu sách',
+    value: '12.540',
+    trend: 'Tăng 8,5% so với tháng trước',
+    icon: 'mdi-book-open-page-variant-outline',
+    color: '#0d9488',
+    bg: '#ccfbf1'
+  },
+  {
+    title: 'Bạn đọc đang hoạt động',
+    value: '2.340',
+    trend: 'Tăng 12,3% so với tháng trước',
+    icon: 'mdi-account-group',
+    color: '#2563eb',
+    bg: '#dbeafe'
+  },
+  {
+    title: 'Đang mượn',
+    value: '128',
+    trend: 'Tăng 15,2% so với tháng trước',
+    icon: 'mdi-calendar-blank-outline',
+    color: '#7c3aed',
+    bg: '#ede9fe'
+  },
+  {
+    title: 'Tiền phạt phát sinh',
+    value: '1.250.000đ',
+    trend: 'Giảm 5,4% so với tháng trước',
+    icon: 'mdi-cash-multiple',
+    color: '#f97316',
+    bg: '#ffedd5',
+    down: true
+  }
+])
+
+const overviewBorrowReturn = ref([
+  { day: '26/05', borrow: 18, returned: 12 },
+  { day: '27/05', borrow: 22, returned: 15 },
+  { day: '28/05', borrow: 24, returned: 18 },
+  { day: '29/05', borrow: 28, returned: 16 },
+  { day: '30/05', borrow: 25, returned: 20 },
+  { day: '31/05', borrow: 27, returned: 22 },
+  { day: '01/06', borrow: 32, returned: 24 }
+])
+
+const overviewStatusStats = ref([
+  { label: 'Đang mượn', value: 128, color: '#22c55e' },
+  { label: 'Đã trả', value: 12, color: '#2563eb' },
+  { label: 'Quá hạn', value: 12, color: '#ef4444' }
+])
+
+const overviewOverdueAlerts = ref([
+  {
+    name: 'Nguyễn Văn Mạnh',
+    book: 'Cấu trúc dữ liệu và giải thuật',
+    days: 3,
+    avatar: 'https://i.pravatar.cc/100?img=12'
+  },
+  {
+    name: 'Phạm Thu Hằng',
+    book: 'Marketing căn bản',
+    days: 1,
+    avatar: 'https://i.pravatar.cc/100?img=32'
+  },
+  {
+    name: 'Vũ Tuấn Anh',
+    book: 'Quản trị mạng máy tính',
+    days: 7,
+    avatar: 'https://i.pravatar.cc/100?img=14'
+  },
+  {
+    name: 'Đỗ Thanh Mai',
+    book: 'Tài chính doanh nghiệp',
+    days: 2,
+    avatar: 'https://i.pravatar.cc/100?img=33'
+  }
+])
+
+const overviewTopBooks = ref([
+  {
+    rank: 1,
+    title: 'Cấu trúc dữ liệu và giải thuật',
+    author: 'Nguyễn Văn Mạnh',
+    count: 45,
+    percent: 100,
+    color: '#0d9488',
+    cover: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=100&q=80'
+  },
+  {
+    rank: 2,
+    title: 'Lập trình hướng đối tượng',
+    author: 'Trần Văn Bình',
+    count: 38,
+    percent: 84,
+    color: '#2563eb',
+    cover: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=100&q=80'
+  },
+  {
+    rank: 3,
+    title: 'Cơ sở dữ liệu',
+    author: 'Hoàng Minh Đức',
+    count: 32,
+    percent: 71,
+    color: '#7c3aed',
+    cover: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=100&q=80'
+  },
+  {
+    rank: 4,
+    title: 'Marketing căn bản',
+    author: 'Phạm Thu Hằng',
+    count: 28,
+    percent: 62,
+    color: '#f97316',
+    cover: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=100&q=80'
+  },
+  {
+    rank: 5,
+    title: 'Kinh tế học vi mô',
+    author: 'Lê Thị Cẩm Tú',
+    count: 25,
+    percent: 55,
+    color: '#14b8a6',
+    cover: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=100&q=80'
+  }
+])
+
+const overviewCategories = ref([
+  { name: 'Sách', count: '8.450', percent: 67.4, color: '#0d9488' },
+  { name: 'Luận văn', count: '2.150', percent: 17.1, color: '#2563eb' },
+  { name: 'Tài liệu số', count: '1.250', percent: 10.0, color: '#7c3aed' },
+  { name: 'Báo cáo', count: '690', percent: 5.5, color: '#f97316' }
+])
+
+const overviewActivities = ref([
+  {
+    time: '10:15',
+    title: 'Độc giả Lê Thị Cẩm Tú đã trả sách',
+    desc: 'Phiếu MS-2026-017'
+  },
+  {
+    time: '09:40',
+    title: 'Gia hạn phiếu MS-2026-011',
+    desc: 'Độc giả Hoàng Minh Đức'
+  },
+  {
+    time: '08:55',
+    title: 'Tạo phiếu mượn mới MS-2026-018',
+    desc: 'Độc giả Nguyễn Văn Mạnh'
+  },
+  {
+    time: '08:20',
+    title: 'Xác nhận trả sách phiếu MS-2026-010',
+    desc: 'Độc giả Trần Thu Phương'
+  },
+  {
+    time: '07:50',
+    title: 'Độc giả Phạm Thu Hằng mượn sách mới',
+    desc: 'Phiếu MS-2026-019'
+  }
+])
+
+const overviewQuickActions = ref([
+  {
+    title: 'Tạo phiếu mượn',
+    icon: 'mdi-plus',
+    menu: 'history',
+    color: '#0d9488',
+    bg: '#ccfbf1'
+  },
+  {
+    title: 'Gia hạn tài liệu',
+    icon: 'mdi-history',
+    menu: 'history',
+    color: '#2563eb',
+    bg: '#dbeafe'
+  },
+  {
+    title: 'Xác nhận trả',
+    icon: 'mdi-check-circle',
+    menu: 'history',
+    color: '#16a34a',
+    bg: '#dcfce7'
+  },
+  {
+    title: 'Quản lý độc giả',
+    icon: 'mdi-account-group',
+    menu: 'readers',
+    color: '#7c3aed',
+    bg: '#ede9fe'
+  },
+  {
+    title: 'Quản lý đầu sách',
+    icon: 'mdi-book-open-page-variant-outline',
+    menu: 'cards',
+    color: '#f97316',
+    bg: '#ffedd5'
+  },
+  {
+    title: 'Báo cáo thống kê',
+    icon: 'mdi-chart-bar',
+    menu: 'reports',
+    color: '#2563eb',
+    bg: '#dbeafe'
+  }
+])
+
+const overviewChartMax = computed(() => {
+  const values = overviewBorrowReturn.value.flatMap((item) => [item.borrow, item.returned])
+  return Math.max(...values, 40)
+})
+
+const makeOverviewPoints = (key) => {
+  return overviewBorrowReturn.value.map((item, index) => {
+    const x = 30 + index * (640 / (overviewBorrowReturn.value.length - 1))
+    const y = 235 - (item[key] / overviewChartMax.value) * 190
+
+    return {
+      x,
+      y,
+      day: item.day,
+      value: item[key]
+    }
+  })
+}
+
+const overviewBorrowPoints = computed(() => makeOverviewPoints('borrow'))
+const overviewReturnPoints = computed(() => makeOverviewPoints('returned'))
+
+const overviewBorrowPolyline = computed(() => {
+  return overviewBorrowPoints.value.map((point) => `${point.x},${point.y}`).join(' ')
+})
+
+const overviewReturnPolyline = computed(() => {
+  return overviewReturnPoints.value.map((point) => `${point.x},${point.y}`).join(' ')
+})
+
+const overviewStatusTotal = computed(() => {
+  return overviewStatusStats.value.reduce((sum, item) => sum + item.value, 0)
+})
+
+const overviewDonutBg = computed(() => {
+  const total = overviewStatusTotal.value || 1
+  let current = 0
+
+  const parts = overviewStatusStats.value.map((item) => {
+    const start = current
+    current += (item.value / total) * 100
+    return `${item.color} ${start}% ${current}%`
+  })
+
+  return `conic-gradient(${parts.join(', ')})`
+})
+
+const overviewPercent = (value) => {
+  if (!overviewStatusTotal.value) return '0.0'
+  return ((value / overviewStatusTotal.value) * 100).toFixed(1)
+}
+
+const overviewFilteredTopBooks = computed(() => {
+  const keyword = quickSearch.value.toLowerCase().trim()
+
+  if (!keyword) return overviewTopBooks.value
+
+  return overviewTopBooks.value.filter((book) => {
+    return (
+      book.title.toLowerCase().includes(keyword) ||
+      book.author.toLowerCase().includes(keyword)
+    )
+  })
+})
+
+const overviewFilteredOverdues = computed(() => {
+  const keyword = quickSearch.value.toLowerCase().trim()
+
+  if (!keyword) return overviewOverdueAlerts.value
+
+  return overviewOverdueAlerts.value.filter((item) => {
+    return (
+      item.name.toLowerCase().includes(keyword) ||
+      item.book.toLowerCase().includes(keyword)
+    )
+  })
+})
+
+const runOverviewAction = (action) => {
+  currentMenu.value = action.menu
+}
+
+const showOverviewActivities = () => {
+  alert('Danh sách hoạt động gần đây đang được đồng bộ từ sự kiện mượn - trả.')
+}
+
 
 // ===================== HỒ SƠ ĐỘC GIẢ =====================
 
@@ -5099,6 +6707,2084 @@ const clearLogs = () => {
 
   .setting-card.full-card {
     overflow-x: auto;
+  }
+}
+
+
+/* ===================== OVERVIEW V3 ===================== */
+
+.overview-v3 {
+  padding-bottom: 28px;
+}
+
+.overview-kpi-card,
+.overview-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.overview-kpi-card {
+  min-height: 118px;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.overview-kpi-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.overview-kpi-info p {
+  margin: 0 0 6px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.overview-kpi-info h2 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.overview-kpi-info span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.overview-kpi-info span.down {
+  color: #ef4444;
+}
+
+.overview-panel {
+  height: 100%;
+  padding: 22px;
+}
+
+.overview-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.overview-panel-head h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.overview-small-select {
+  height: 38px;
+  min-width: 118px;
+  border: 1px solid #dbe4ea;
+  border-radius: 10px;
+  background: white;
+  padding: 0 12px;
+  color: #334155;
+  font-weight: 800;
+  outline: none;
+}
+
+.overview-text-link {
+  border: none;
+  background: transparent;
+  color: #0d9488;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.overview-line-chart {
+  height: 310px;
+  position: relative;
+  padding-bottom: 36px;
+}
+
+.overview-line-chart svg {
+  width: 100%;
+  height: 270px;
+  overflow: visible;
+}
+
+.overview-x-labels {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 15px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.overview-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 850;
+  margin-top: 6px;
+}
+
+.overview-chart-legend i {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 7px;
+  border-radius: 50%;
+}
+
+.overview-chart-legend .borrow {
+  background: #0d9488;
+}
+
+.overview-chart-legend .return {
+  background: #2563eb;
+}
+
+.overview-status-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-donut-wrap {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+.overview-donut {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+.overview-donut-hole {
+  width: 105px;
+  height: 105px;
+  border-radius: 50%;
+  background: white;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.overview-donut-hole span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 14px;
+}
+
+.overview-donut-hole strong {
+  color: #0f172a;
+  font-size: 34px;
+  font-weight: 950;
+  margin-top: -18px;
+}
+
+.overview-donut-list {
+  width: 100%;
+  display: grid;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.overview-donut-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.overview-donut-list span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.overview-donut-list i {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+}
+
+.overview-link-btn {
+  height: 43px;
+  border: 1px solid #dbe4ea;
+  border-radius: 12px;
+  background: white;
+  color: #0d9488;
+  font-weight: 950;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.overview-link-btn:hover {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+.overview-alert-list {
+  display: grid;
+  gap: 14px;
+}
+
+.overview-alert-item {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.overview-alert-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.overview-alert-item strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.overview-alert-item span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.overview-alert-item b {
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: #ef4444;
+  background: #fee2e2;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.lower-panel {
+  min-height: 390px;
+}
+
+.overview-book-list {
+  display: grid;
+  gap: 12px;
+}
+
+.overview-book-row {
+  display: grid;
+  grid-template-columns: 30px 42px 1fr 34px;
+  gap: 12px;
+  align-items: center;
+}
+
+.rank-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 950;
+  background: #64748b;
+}
+
+.rank-1 { background: #f97316; }
+.rank-2 { background: #3b82f6; }
+.rank-3 { background: #f59e0b; }
+.rank-4 { background: #0d9488; }
+.rank-5 { background: #14b8a6; }
+
+.overview-book-row img {
+  width: 42px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.overview-book-row strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.overview-book-row span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.overview-book-row b {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.book-progress,
+.category-progress {
+  height: 7px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.book-progress i,
+.category-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.overview-category-list {
+  display: grid;
+  gap: 20px;
+}
+
+.category-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 9px;
+}
+
+.category-head strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.category-head span {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.overview-category-list small {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.overview-timeline {
+  display: grid;
+  gap: 0;
+  margin-bottom: 22px;
+}
+
+.overview-timeline > div {
+  display: grid;
+  grid-template-columns: 46px 18px 1fr;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 17px;
+}
+
+.overview-timeline > div:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 54px;
+  top: 15px;
+  bottom: 0;
+  width: 2px;
+  background: #dbe4ea;
+}
+
+.overview-timeline > div > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: right;
+  padding-top: 2px;
+}
+
+.overview-timeline > div > i {
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #0d9488;
+  border: 3px solid #ccfbf1;
+  position: relative;
+  z-index: 2;
+}
+
+.overview-timeline strong {
+  display: block;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.overview-timeline p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.overview-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+}
+
+.overview-quick-actions button {
+  min-height: 84px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  cursor: pointer;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  transition: 0.2s;
+}
+
+.overview-quick-actions button:hover {
+  transform: translateY(-3px);
+  border-color: #99f6e4;
+  box-shadow: 0 12px 26px rgba(13, 148, 136, 0.12);
+}
+
+.overview-quick-actions span {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.overview-quick-actions b {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 950;
+  text-align: center;
+}
+
+@media (max-width: 1280px) {
+  .overview-line-chart {
+    height: 280px;
+  }
+
+  .overview-quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .overview-kpi-card {
+    align-items: flex-start;
+  }
+
+  .overview-panel-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .overview-book-row {
+    grid-template-columns: 28px 38px 1fr;
+  }
+
+  .overview-book-row > b {
+    display: none;
+  }
+
+  .overview-quick-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+
+/* =========================================================
+   FIX FONT + GIAO DIỆN TỔNG QUAN GIỐNG ẢNH MẪU
+   Dán cuối <style scoped> hoặc dùng file đã sửa.
+========================================================= */
+
+:global(body),
+:global(.v-application) {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif !important;
+  background: #f5f7fb !important;
+  color: #0f172a !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* Sidebar chữ rõ, màu giống ảnh */
+:deep(.v-navigation-drawer) {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(45, 212, 191, 0.22), transparent 34%),
+    linear-gradient(180deg, #064e40 0%, #06493d 48%, #053d35 100%) !important;
+  box-shadow: 16px 0 40px rgba(6, 78, 64, 0.08);
+}
+
+:deep(.v-navigation-drawer .v-list-item) {
+  min-height: 48px !important;
+  margin-bottom: 10px !important;
+  border-radius: 12px !important;
+}
+
+:deep(.v-navigation-drawer .v-list-item-title) {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.15px !important;
+  color: #d1fae5 !important;
+}
+
+.active-menu-item {
+  background: linear-gradient(135deg, #0d9488, #14b8a6) !important;
+  box-shadow: 0 14px 28px rgba(13, 148, 136, 0.26);
+}
+
+.active-menu-item :deep(.v-list-item-title),
+.active-menu-item :deep(.v-icon) {
+  color: #ffffff !important;
+}
+
+.user-profile-box {
+  min-height: 76px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Header giống ảnh */
+:deep(.v-app-bar) {
+  background: #f5f7fb !important;
+  border-bottom: none !important;
+}
+
+:deep(.v-app-bar h2) {
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.8px !important;
+  color: #111827 !important;
+}
+
+:deep(.v-app-bar .text-caption) {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.search-input {
+  width: 300px !important;
+}
+
+.search-input :deep(.v-field) {
+  min-height: 48px !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+}
+
+.search-input :deep(input) {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+}
+
+/* Tổng quan: khung chữ, khoảng cách và card */
+.overview-v3 {
+  padding: 8px 0 30px;
+}
+
+.overview-kpi-row {
+  margin-bottom: 18px !important;
+}
+
+.overview-kpi-card,
+.overview-panel {
+  background: #ffffff !important;
+  border: 1px solid #e3e8ef !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+.overview-kpi-card {
+  min-height: 128px !important;
+  padding: 24px 26px !important;
+  gap: 20px !important;
+}
+
+.overview-kpi-icon {
+  width: 70px !important;
+  height: 70px !important;
+  border-radius: 50% !important;
+}
+
+.overview-kpi-info p {
+  margin: 0 0 9px !important;
+  color: #111827 !important;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.25px !important;
+}
+
+.overview-kpi-info h2 {
+  margin: 0 !important;
+  font-size: 33px !important;
+  line-height: 1.05 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.9px !important;
+}
+
+.overview-kpi-info span {
+  margin-top: 9px !important;
+  color: #16a34a !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  font-weight: 750 !important;
+}
+
+.overview-kpi-info span.down {
+  color: #ef4444 !important;
+}
+
+/* Panel title */
+.overview-panel {
+  padding: 23px 24px !important;
+}
+
+.overview-panel-head {
+  margin-bottom: 18px !important;
+}
+
+.overview-panel-head h3 {
+  color: #111827 !important;
+  font-size: 20px !important;
+  line-height: 1.3 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.45px !important;
+}
+
+.overview-text-link,
+.overview-link-btn {
+  color: #0d9488 !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+}
+
+/* Biểu đồ lớn */
+.overview-line-chart {
+  height: 330px !important;
+  padding: 8px 8px 38px !important;
+}
+
+.overview-line-chart svg {
+  height: 280px !important;
+}
+
+.overview-line-chart text {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+}
+
+.overview-x-labels {
+  padding: 0 22px !important;
+  color: #0f172a !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+}
+
+.overview-chart-legend {
+  gap: 28px !important;
+  color: #111827 !important;
+  font-size: 15px !important;
+  font-weight: 750 !important;
+}
+
+/* Donut */
+.overview-donut {
+  width: 180px !important;
+  height: 180px !important;
+  filter: drop-shadow(0 18px 28px rgba(13, 148, 136, 0.16));
+}
+
+.overview-donut-hole {
+  width: 106px !important;
+  height: 106px !important;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.09) !important;
+}
+
+.overview-donut-hole span {
+  color: #111827 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+
+.overview-donut-hole strong {
+  color: #111827 !important;
+  font-size: 33px !important;
+  font-weight: 900 !important;
+}
+
+.overview-donut-list div {
+  color: #111827 !important;
+  font-size: 15px !important;
+  font-weight: 750 !important;
+}
+
+.overview-donut-list b {
+  color: #111827 !important;
+  font-weight: 850 !important;
+}
+
+/* Danh sách cảnh báo */
+.overview-alert-item {
+  min-height: 66px !important;
+  padding: 8px 0 14px !important;
+}
+
+.overview-alert-item strong {
+  color: #111827 !important;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.2px !important;
+}
+
+.overview-alert-item span {
+  color: #64748b !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+
+.overview-alert-item b {
+  font-size: 13px !important;
+  font-weight: 850 !important;
+  padding: 8px 12px !important;
+}
+
+/* Lower cards */
+.lower-panel {
+  min-height: 390px !important;
+}
+
+.overview-book-row {
+  grid-template-columns: 30px 45px 1fr 45px !important;
+  gap: 13px !important;
+  padding: 4px 0 !important;
+}
+
+.overview-book-row img {
+  width: 45px !important;
+  height: 58px !important;
+  border-radius: 7px !important;
+}
+
+.overview-book-row strong,
+.category-head strong,
+.overview-timeline strong {
+  color: #111827 !important;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.2px !important;
+}
+
+.overview-book-row span,
+.overview-timeline p {
+  color: #64748b !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  font-weight: 650 !important;
+}
+
+.overview-book-row b {
+  color: #111827 !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+}
+
+.category-head span,
+.overview-category-list small {
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+
+.category-progress,
+.book-progress {
+  height: 8px !important;
+  background: #e8edf3 !important;
+}
+
+.overview-timeline > div > span {
+  color: #64748b !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+}
+
+.overview-timeline > div > i {
+  background: #0d9488 !important;
+  border-color: #ccfbf1 !important;
+}
+
+.overview-quick-actions button {
+  background: #f8fafc !important;
+  border: 1px solid #e3e8ef !important;
+  border-radius: 14px !important;
+}
+
+.overview-quick-actions b {
+  color: #111827 !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  font-weight: 850 !important;
+}
+
+/* Vuetify text helper chỉnh nhẹ để đồng bộ font */
+:deep(.text-caption) {
+  letter-spacing: 0 !important;
+}
+
+:deep(.font-weight-bold) {
+  font-weight: 800 !important;
+}
+
+@media (max-width: 1280px) {
+  .search-input {
+    width: 250px !important;
+  }
+
+  .overview-kpi-info h2 {
+    font-size: 29px !important;
+  }
+
+  .overview-panel-head h3 {
+    font-size: 18px !important;
+  }
+}
+
+
+
+/* ===================== HEADER SEARCH / NOTIFICATION / AVATAR ACTIONS ===================== */
+.dashboard-header-actions {
+  gap: 0;
+}
+
+.quick-search-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.quick-search-menu,
+.notification-menu-card,
+.account-menu-card {
+  border-radius: 18px !important;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  background: white;
+}
+
+.quick-search-menu {
+  width: 390px;
+  padding: 12px;
+}
+
+.search-menu-head,
+.notification-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 8px 12px;
+}
+
+.search-menu-head strong,
+.notification-head h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.search-menu-head span,
+.notification-head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.search-result-list,
+.notification-list {
+  display: grid;
+  gap: 7px;
+  max-height: 390px;
+  overflow-y: auto;
+}
+
+.search-result-item,
+.notification-item {
+  width: 100%;
+  border: none;
+  border-radius: 13px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px;
+  text-align: left;
+  transition: 0.18s ease;
+}
+
+.search-result-item:hover,
+.notification-item:hover {
+  background: #f8fafc;
+}
+
+.search-result-item > span,
+.noti-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.search-result-item strong,
+.notification-item strong {
+  display: block;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.search-result-item small,
+.notification-item p {
+  display: block;
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.notification-item small {
+  display: block;
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.notification-item.unread {
+  background: #f0fdfa;
+}
+
+.notification-item.unread strong::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  vertical-align: middle;
+}
+
+.search-empty-state {
+  padding: 28px 18px;
+  text-align: center;
+  color: #64748b;
+}
+
+.search-empty-state p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notification-menu-card {
+  width: 420px;
+}
+
+.notification-head {
+  padding: 16px 16px 12px;
+}
+
+.notification-head button,
+.notification-footer {
+  border: none;
+  background: transparent;
+  color: #0d9488;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.notification-footer {
+  width: 100%;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.notification-btn:hover,
+.avatar-menu-btn:hover {
+  background: #f0fdfa !important;
+}
+
+.avatar-menu-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 4px;
+  border-radius: 999px;
+  transition: 0.18s ease;
+}
+
+.account-menu-card {
+  width: 300px;
+  padding: 10px;
+}
+
+.account-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+}
+
+.account-menu-head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.account-menu-head p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-menu-item {
+  width: 100%;
+  min-height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  margin: 5px 0;
+  transition: 0.18s ease;
+}
+
+.account-menu-item:hover {
+  background: #f8fafc;
+  color: #0d9488;
+}
+
+.account-menu-item.logout {
+  color: #ef4444;
+}
+
+.account-menu-item.logout:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.sidebar-user-btn {
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  transition: 0.18s ease;
+}
+
+.sidebar-user-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.sidebar-user-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.sidebar-user-text strong {
+  display: block;
+  color: white;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.sidebar-user-text span {
+  display: block;
+  margin-top: 4px;
+  color: #99f6e4;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profile-dialog-card {
+  border-radius: 24px !important;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: white;
+}
+
+.profile-dialog-cover {
+  height: 118px;
+  background:
+    radial-gradient(circle at 15% 40%, rgba(45, 212, 191, 0.28), transparent 24%),
+    linear-gradient(135deg, #064e40, #0d9488);
+}
+
+.profile-dialog-body {
+  padding: 0 28px 28px;
+}
+
+.profile-dialog-head {
+  display: flex;
+  align-items: end;
+  gap: 18px;
+  margin-top: -48px;
+}
+
+.profile-dialog-avatar {
+  border: 5px solid white;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
+}
+
+.profile-dialog-head h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.profile-dialog-head p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-info-grid {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.profile-info-grid div {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.profile-info-grid span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.profile-info-grid strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.profile-dialog-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .quick-search-menu,
+  .notification-menu-card,
+  .account-menu-card {
+    width: calc(100vw - 32px);
+  }
+
+  .profile-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ===================== NOTIFICATION CENTER V2 ===================== */
+
+.admin-head-avatar {
+  box-shadow: 0 8px 18px rgba(13, 148, 136, 0.18);
+}
+
+.notification-v2-page {
+  padding: 18px 0 28px;
+}
+
+.notification-hero-v2 {
+  min-height: 142px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+  display: grid;
+  grid-template-columns: 210px 1fr 280px;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 34px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bell-illustration-v2 {
+  height: 110px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.bell-circle-v2 {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #0d9488;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.9), transparent 38%),
+    linear-gradient(135deg, #ccfbf1, #99f6e4);
+  box-shadow: 0 18px 34px rgba(13, 148, 136, 0.16);
+}
+
+.spark {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: #14b8a6;
+  transform: rotate(45deg);
+}
+
+.spark.s1 { left: 28px; top: 22px; }
+.spark.s2 { right: 28px; top: 34px; background: #fbbf24; }
+.spark.s3 { right: 52px; bottom: 16px; background: #0d9488; }
+
+.notification-hero-content-v2 {
+  border-left: 1px dashed #cbd5e1;
+  padding-left: 34px;
+}
+
+.notification-hero-content-v2 h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 950;
+  color: #0f172a;
+}
+
+.notification-hero-content-v2 p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.65;
+  font-weight: 650;
+}
+
+.notification-hero-side-v2 {
+  border-left: 1px dashed #cbd5e1;
+  padding-left: 28px;
+  display: grid;
+  gap: 14px;
+}
+
+.notification-hero-side-v2 > div {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0 10px;
+  color: #64748b;
+}
+
+.notification-hero-side-v2 strong {
+  grid-column: 2;
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.auto-refresh-toggle-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #475569;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auto-refresh-toggle-v2 input {
+  display: none;
+}
+
+.auto-refresh-toggle-v2 i {
+  width: 46px;
+  height: 24px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  position: relative;
+  transition: 0.2s;
+}
+
+.auto-refresh-toggle-v2 i::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: 0.2s;
+}
+
+.auto-refresh-toggle-v2 input:checked + i {
+  background: #0d9488;
+}
+
+.auto-refresh-toggle-v2 input:checked + i::after {
+  left: 24px;
+}
+
+.notification-stat-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.notification-stat-card-v2 {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: white;
+  min-height: 104px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+  transition: 0.2s;
+}
+
+.notification-stat-card-v2:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 42px rgba(13, 148, 136, 0.1);
+  border-color: #99f6e4;
+}
+
+.notification-stat-card-v2 .stat-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.notification-stat-card-v2 .stat-icon.blue { color: #2563eb; background: #dbeafe; }
+.notification-stat-card-v2 .stat-icon.red { color: #ef4444; background: #fee2e2; }
+.notification-stat-card-v2 .stat-icon.teal { color: #0d9488; background: #ccfbf1; }
+.notification-stat-card-v2 .stat-icon.green { color: #16a34a; background: #dcfce7; }
+
+.notification-stat-card-v2 p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 850;
+}
+
+.notification-stat-card-v2 h3 {
+  margin: 4px 0;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 950;
+}
+
+.notification-stat-card-v2 small {
+  color: #64748b;
+  font-weight: 650;
+}
+
+.notification-layout-v2 {
+  display: grid;
+  grid-template-columns: 1.55fr 0.85fr;
+  gap: 18px;
+}
+
+.notification-left-v2,
+.notification-detail-card-v2,
+.activity-card-v2 {
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+}
+
+.notification-toolbar-v2 {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.notification-tabs-v2 {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.notification-tabs-v2 button {
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #475569;
+  font-weight: 850;
+  cursor: pointer;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.notification-tabs-v2 button.active {
+  border-color: #0d9488;
+  color: #0d9488;
+  background: #f0fdfa;
+}
+
+.notification-tabs-v2 b {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+}
+
+.notification-filter-v2 {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 12px;
+}
+
+.notification-search-v2 {
+  height: 42px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #64748b;
+}
+
+.notification-search-v2 input,
+.notification-filter-v2 select {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.notification-filter-v2 select {
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  padding: 0 12px;
+  background: white;
+}
+
+.notification-action-bar-v2 {
+  min-height: 56px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notification-action-bar-v2 > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #0f172a;
+  font-weight: 950;
+}
+
+.notification-actions-v2 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notification-actions-v2 button {
+  height: 34px;
+  border: 1px solid #0d9488;
+  border-radius: 8px;
+  background: white;
+  color: #0d9488;
+  padding: 0 10px;
+  cursor: pointer;
+  font-weight: 850;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.notification-actions-v2 button.danger {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.notification-actions-v2 button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notification-list-v2 {
+  padding: 10px 16px;
+}
+
+.notification-row-v2 {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 22px 10px 54px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border-bottom: 1px solid #eef2f7;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.notification-row-v2:hover,
+.notification-row-v2.active {
+  background: #f0fdfa;
+}
+
+.notification-row-v2.unread {
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.1), rgba(255,255,255,0.6));
+}
+
+.read-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.read-dot.read {
+  background: #cbd5e1;
+}
+
+.notification-icon-v2 {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.notification-main-v2 > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-main-v2 h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.notification-time-v2 {
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
+  font-weight: 650;
+}
+
+.notification-main-v2 p {
+  margin: 4px 0 6px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.notification-meta-v2 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notification-meta-v2 span {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.notification-meta-v2 .priority.high { color: #ef4444; background: #fee2e2; }
+.notification-meta-v2 .priority.medium { color: #f97316; background: #ffedd5; }
+.notification-meta-v2 .priority.low { color: #0d9488; background: #ccfbf1; }
+
+.notification-status-chip-v2 {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.notification-status-chip-v2.done {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.notification-status-chip-v2.pending {
+  background: #fff7ed;
+  color: #f97316;
+}
+
+.notification-empty-v2 {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #64748b;
+}
+
+.notification-empty-v2 h3 {
+  margin: 8px 0 0;
+  color: #334155;
+}
+
+.notification-pagination-v2 {
+  min-height: 56px;
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notification-pagination-v2 div {
+  display: flex;
+  gap: 6px;
+}
+
+.notification-pagination-v2 button {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.notification-pagination-v2 button.active {
+  background: #0d9488;
+  color: white;
+  border-color: #0d9488;
+}
+
+.notification-pagination-v2 button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notification-right-v2 {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.notification-detail-card-v2,
+.activity-card-v2 {
+  padding: 18px;
+}
+
+.detail-head-v2,
+.activity-head-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.detail-head-v2 h3,
+.activity-head-v2 h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.detail-head-v2 button,
+.activity-head-v2 button {
+  border: none;
+  background: transparent;
+  color: #0d9488;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.detail-title-v2 {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.detail-title-v2 > span {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.detail-title-v2 h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.detail-title-v2 p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.priority-text.high { color: #ef4444; }
+.priority-text.medium { color: #f97316; }
+.priority-text.low { color: #0d9488; }
+
+.detail-message-v2 {
+  color: #475569;
+  line-height: 1.7;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.reader-normal-box-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.normal-person-avatar-v2 {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #0d9488;
+  background: #ccfbf1;
+  flex-shrink: 0;
+}
+
+.reader-normal-box-v2 strong {
+  color: #0f172a;
+  font-weight: 950;
+}
+
+.reader-normal-box-v2 p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.detail-info-grid-v2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.detail-info-grid-v2 div {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.detail-info-grid-v2 span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.detail-info-grid-v2 strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.detail-actions-v2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.65fr;
+  gap: 10px;
+}
+
+.detail-actions-v2 button {
+  height: 40px;
+  border: 1px solid #0d9488;
+  border-radius: 9px;
+  background: white;
+  color: #0d9488;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.detail-actions-v2 button:nth-child(2) {
+  background: #0d9488;
+  color: white;
+}
+
+.detail-actions-v2 button.danger {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.detail-empty-v2 {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #64748b;
+}
+
+.activity-list-v2 {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-item-v2 {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  position: relative;
+}
+
+.activity-item-v2:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 36px;
+  bottom: -10px;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.activity-item-v2 > span {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: white;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+}
+
+.activity-item-v2 b {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.activity-item-v2 h4 {
+  margin: 2px 0 2px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.activity-item-v2 p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.notification-dialog-v2 {
+  padding: 24px;
+  border-radius: 18px !important;
+}
+
+.dialog-head-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.dialog-head-v2 h3 {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 950;
+}
+
+.dialog-actions-v2 {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 1400px) {
+  .notification-hero-v2 {
+    grid-template-columns: 160px 1fr;
+  }
+
+  .notification-hero-side-v2 {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px dashed #cbd5e1;
+    padding-left: 0;
+    padding-top: 18px;
+  }
+
+  .notification-layout-v2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .notification-hero-v2,
+  .notification-stat-grid-v2,
+  .notification-filter-v2 {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-hero-content-v2 {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .notification-row-v2 {
+    grid-template-columns: 22px 10px 48px 1fr;
+  }
+
+  .notification-status-chip-v2 {
+    grid-column: 4;
+    justify-self: start;
+  }
+
+  .notification-pagination-v2,
+  .notification-action-bar-v2 {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detail-actions-v2,
+  .detail-info-grid-v2 {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -34,3 +34,8 @@ Thumbs.db
 
 # Docker local
 docker-data/
+
+library-frontend/node_modules/
+library-frontend/dist/
+library-frontend/.env
+

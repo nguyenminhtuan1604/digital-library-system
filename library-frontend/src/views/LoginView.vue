@@ -8,7 +8,7 @@
       <div class="text-center mb-6 cursor-pointer" @click="$router.push('/')">
         <div class="d-flex align-center justify-center mb-1">
           <v-icon color="#0d9488" size="36" class="mr-2">mdi-book-open-page-variant</v-icon>
-          <h2 class="text-h5 font-weight-black text-grey-darken-4">Library System</h2>
+          <h2 class="text-h5 font-weight-black text-grey-darken-4">Digital Library</h2>
         </div>
         <p class="text-caption text-grey-darken-1">Hệ thống quản lý thư viện số</p>
       </div>
