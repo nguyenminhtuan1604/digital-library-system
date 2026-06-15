@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("IdentityReportService")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c370b994da2a0619d271ceed9639b8f2473a847e")]
 [assembly: System.Reflection.AssemblyProductAttribute("IdentityReportService")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IdentityReportService")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
