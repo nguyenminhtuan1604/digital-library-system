@@ -1,11 +1,9 @@
 <template>
   <v-app :class="['home-page', { 'dark-mode': isDarkMode }]">
-    <!-- SNACKBAR -->
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="2200" location="top right">
       {{ snackbar.text }}
     </v-snackbar>
 
-    <!-- HEADER -->
     <v-app-bar flat height="84" class="px-md-10 px-4 border-b app-header">
       <div class="d-flex align-center cursor-pointer" @click="scrollToSection('home')">
         <v-icon size="32" color="#0d9488" class="mr-2">mdi-book-open-page-variant</v-icon>
@@ -40,25 +38,113 @@
           @click="toggleTheme"
         />
 
-        <v-btn
-          variant="outlined"
-          color="#0d9488"
-          class="text-none font-weight-bold rounded-lg px-6 d-none d-sm-flex"
-          height="42"
-          @click="goToLogin"
-        >
-          Đăng nhập
-        </v-btn>
+        <template v-if="!isLoggedIn">
+          <v-btn
+            variant="outlined"
+            color="#0d9488"
+            class="text-none font-weight-bold rounded-lg px-6 d-none d-sm-flex"
+            height="42"
+            to="/login"
+          >
+            Đăng nhập
+          </v-btn>
 
-        <v-btn
-          color="#0d9488"
-          variant="flat"
-          class="text-white text-none font-weight-bold rounded-lg px-6 d-none d-sm-flex"
-          height="42"
-          @click="goToRegister"
-        >
-          Đăng ký
-        </v-btn>
+          <v-btn
+            color="#0d9488"
+            variant="flat"
+            class="text-white text-none font-weight-bold rounded-lg px-6 d-none d-sm-flex"
+            height="42"
+            to="/register"
+          >
+            Đăng ký
+          </v-btn>
+        </template>
+
+        <v-menu v-else offset-y location="bottom end" transition="scale-transition">
+  <template #activator="{ props }">
+    <button v-bind="props" class="profile-pill">
+      <div class="profile-avatar-wrap">
+        <v-avatar size="42" class="profile-avatar">
+          <span>{{ userInitial }}</span>
+        </v-avatar>
+        <span class="online-dot"></span>
+      </div>
+
+      <div class="profile-info d-none d-sm-flex">
+        <strong>{{ displayName }}</strong>
+        <small>{{ displayCardId || 'Độc giả' }}</small>
+      </div>
+
+      <v-icon size="20" class="profile-arrow">mdi-chevron-down</v-icon>
+    </button>
+  </template>
+
+  <v-card width="320" class="profile-menu-card rounded-xl" elevation="12">
+    <div class="profile-menu-head">
+      <div class="profile-big-avatar">
+        {{ userInitial }}
+      </div>
+
+      <div>
+        <h3>{{ displayName }}</h3>
+        <p>{{ displayEmail }}</p>
+        <span>{{ displayCardId || 'Chưa có mã thẻ' }}</span>
+      </div>
+    </div>
+
+    <v-divider class="my-2" />
+
+    <v-list density="compact" nav class="pa-2">
+      <v-list-item
+        prepend-icon="mdi-home-outline"
+        title="Trang chủ"
+        rounded="lg"
+        @click="scrollToSection('home')"
+      />
+
+      <v-list-item
+        prepend-icon="mdi-book-open-page-variant"
+        title="Tài liệu"
+        rounded="lg"
+        @click="scrollToSection('documents')"
+      />
+
+      <v-list-item
+        prepend-icon="mdi-card-account-details-outline"
+        title="Thẻ thư viện"
+        rounded="lg"
+        @click="showMyLibraryCard"
+      />
+
+      <v-list-item
+        prepend-icon="mdi-heart-outline"
+        title="Yêu thích"
+        rounded="lg"
+        @click="showMessage('Tính năng yêu thích đang được cập nhật.')"
+      />
+
+      <v-list-item
+        prepend-icon="mdi-history"
+        title="Lịch sử mượn"
+        rounded="lg"
+        @click="showMessage('Lịch sử mượn sẽ được đồng bộ từ Circulation Service.')"
+      />
+    </v-list>
+
+    <div class="px-4 pb-4">
+      <v-btn
+        block
+        color="red"
+        variant="tonal"
+        class="text-none font-weight-bold rounded-lg"
+        prepend-icon="mdi-logout"
+        @click="logout"
+      >
+        Đăng xuất
+      </v-btn>
+    </div>
+  </v-card>
+</v-menu>
 
         <v-btn
           icon="mdi-menu"
@@ -69,7 +155,6 @@
       </div>
     </v-app-bar>
 
-    <!-- MOBILE MENU -->
     <v-navigation-drawer v-model="mobileMenu" temporary location="right" width="290">
       <div class="pa-5">
         <div class="d-flex align-center mb-6">
@@ -91,14 +176,55 @@
           />
         </v-list>
 
-        <v-btn block color="#0d9488" class="text-white text-none font-weight-bold mt-4" @click="goToRegister">
-          Đăng ký ngay
-        </v-btn>
+        <div v-if="isLoggedIn" class="mobile-user-card mt-4">
+          <div class="d-flex align-center mb-3">
+            <v-avatar size="42" color="#ccfbf1" class="mr-3">
+              <span class="font-weight-black text-teal-darken-2">{{ userInitial }}</span>
+            </v-avatar>
+
+            <div>
+              <div class="font-weight-black text-grey-darken-4">{{ displayName }}</div>
+              <div class="text-caption text-grey-darken-1">{{ displayEmail }}</div>
+              <div v-if="displayCardId" class="text-caption text-teal-darken-2 font-weight-bold">
+                Thẻ: {{ displayCardId }}
+              </div>
+            </div>
+          </div>
+
+          <v-btn
+            block
+            variant="outlined"
+            color="#0d9488"
+            class="text-none font-weight-bold mb-2"
+            @click="showMyLibraryCard"
+          >
+            Xem thẻ thư viện
+          </v-btn>
+
+          <v-btn
+            block
+            color="red"
+            variant="tonal"
+            class="text-none font-weight-bold"
+            @click="logout"
+          >
+            Đăng xuất
+          </v-btn>
+        </div>
+
+        <div v-else class="mt-4">
+          <v-btn block variant="outlined" color="#0d9488" class="text-none font-weight-bold mb-2" to="/login">
+            Đăng nhập
+          </v-btn>
+
+          <v-btn block color="#0d9488" class="text-white text-none font-weight-bold" to="/register">
+            Đăng ký ngay
+          </v-btn>
+        </div>
       </div>
     </v-navigation-drawer>
 
     <v-main>
-      <!-- HERO -->
       <section id="home" class="hero-section">
         <v-container fluid class="px-md-16 py-12 py-md-16">
           <v-row align="center">
@@ -195,7 +321,6 @@
         </v-container>
       </section>
 
-      <!-- FEATURES -->
       <section id="about" class="bg-grey-lighten-4">
         <v-container fluid class="px-md-16 py-16">
           <div class="text-center mb-12">
@@ -232,7 +357,6 @@
         </v-container>
       </section>
 
-      <!-- STATS -->
       <section class="stats-section py-16 px-md-16 text-center text-white">
         <v-chip color="white" variant="outlined" size="small" class="font-weight-bold mb-4 border-opacity-50">
           THỐNG KÊ ẤN TƯỢNG
@@ -253,7 +377,6 @@
         </v-row>
       </section>
 
-      <!-- DOCUMENTS -->
       <section id="documents">
         <v-container fluid class="px-md-16 py-16">
           <div class="d-flex justify-space-between align-end mb-8 flex-wrap ga-3">
@@ -326,7 +449,6 @@
         </v-container>
       </section>
 
-      <!-- CATEGORIES -->
       <section id="categories" class="bg-grey-lighten-4">
         <v-container fluid class="px-md-16 py-16">
           <div class="text-center mb-10">
@@ -354,7 +476,6 @@
         </v-container>
       </section>
 
-      <!-- REVIEWS / NEWS -->
       <section id="news" class="bg-grey-lighten-5">
         <v-container fluid class="px-md-16 py-10">
           <div class="d-flex justify-space-between align-end mb-8 flex-wrap ga-3">
@@ -405,7 +526,6 @@
         </v-container>
       </section>
 
-      <!-- CTA -->
       <v-container fluid class="px-md-16 py-12">
         <v-card class="cta-banner rounded-xl overflow-hidden" elevation="10">
           <v-row no-gutters align="center">
@@ -423,10 +543,11 @@
                 color="#0d9488"
                 class="text-white text-none font-weight-bold rounded-lg px-8"
                 height="54"
-                prepend-icon="mdi-account-plus-outline"
-                @click="goToRegister"
+                :prepend-icon="isLoggedIn ? 'mdi-compass-outline' : 'mdi-account-plus-outline'"
+                :to="isLoggedIn ? undefined : '/register'"
+                @click="isLoggedIn ? scrollToSection('documents') : null"
               >
-                Đăng ký ngay
+                {{ isLoggedIn ? 'Khám phá tài liệu' : 'Đăng ký ngay' }}
               </v-btn>
             </v-col>
           </v-row>
@@ -434,7 +555,6 @@
       </v-container>
     </v-main>
 
-    <!-- FOOTER -->
     <v-footer id="contact" class="footer-section px-md-16 py-12 text-white d-block">
       <v-row>
         <v-col cols="12" md="3" class="pr-md-8">
@@ -455,7 +575,7 @@
           <div class="footer-links">
             <a href="#" @click.prevent="scrollToSection('documents')">Tài liệu</a>
             <a href="#" @click.prevent="scrollToSection('categories')">Thể loại</a>
-            <a href="#" @click.prevent="goToRegister">Thẻ thư viện</a>
+            <router-link to="/login">Thẻ thư viện</router-link>
             <a href="#" @click.prevent="showGuide">Hướng dẫn mượn trả</a>
           </div>
         </v-col>
@@ -493,7 +613,6 @@
       </div>
     </v-footer>
 
-    <!-- BOOK DETAIL DIALOG -->
     <v-dialog v-model="bookDialog" max-width="780">
       <v-card class="rounded-xl pa-0 overflow-hidden">
         <v-row no-gutters>
@@ -543,7 +662,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- LIST DIALOG -->
     <v-dialog v-model="listDialog" max-width="950">
       <v-card class="rounded-xl pa-6">
         <div class="d-flex justify-space-between align-center mb-5">
@@ -565,7 +683,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- INFO DIALOG -->
     <v-dialog v-model="infoDialog" max-width="650">
       <v-card class="rounded-xl pa-6">
         <div class="d-flex justify-space-between align-center mb-4">
@@ -583,7 +700,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- HERO PREVIEW DIALOG -->
     <v-dialog v-model="heroPreviewDialog" max-width="920">
       <v-card class="rounded-xl overflow-hidden">
         <v-img src="https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&q=80&w=1200" height="520" cover />
@@ -593,10 +709,49 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+const currentUser = ref(null)
+
+const isLoggedIn = computed(() => {
+  return !!currentUser.value
+})
+
+const displayName = computed(() => {
+  return currentUser.value?.name || currentUser.value?.fullName || 'Độc giả'
+})
+
+const displayEmail = computed(() => {
+  return currentUser.value?.email || ''
+})
+
+const displayCardId = computed(() => {
+  return currentUser.value?.cardId || currentUser.value?.libraryCard?.cardId || ''
+})
+
+const userInitial = computed(() => {
+  return displayName.value.trim().charAt(0).toUpperCase() || 'U'
+})
+
+const loadCurrentUser = () => {
+  const savedUser =
+    JSON.parse(localStorage.getItem('library_current_user') || 'null') ||
+    JSON.parse(localStorage.getItem('library_auth_user') || 'null') ||
+    JSON.parse(localStorage.getItem('user') || 'null')
+
+  if (savedUser && savedUser.role !== 'admin') {
+    currentUser.value = savedUser
+  } else {
+    currentUser.value = null
+  }
+}
+
+onMounted(() => {
+  loadCurrentUser()
+})
 
 const isDarkMode = ref(false)
 const mobileMenu = ref(false)
@@ -730,17 +885,46 @@ const scrollMobile = (sectionId) => {
   scrollToSection(sectionId)
 }
 
+const showMyLibraryCard = () => {
+  if (!isLoggedIn.value) {
+    router.push('/login')
+    return
+  }
+
+  infoTitle.value = 'Thẻ thư viện của tôi'
+  infoText.value =
+    `Họ tên: ${displayName.value}
+` +
+    `Email: ${displayEmail.value || 'Chưa cập nhật'}
+` +
+    `Mã thẻ: ${displayCardId.value || 'Chưa có thẻ'}
+` +
+    `Trạng thái: ${currentUser.value?.cardStatus || currentUser.value?.libraryCard?.status || 'Đang hoạt động'}
+` +
+    `Ngày cấp: ${currentUser.value?.issueDate || currentUser.value?.libraryCard?.issueDate || 'Chưa cập nhật'}
+` +
+    `Ngày hết hạn: ${currentUser.value?.expireDate || currentUser.value?.libraryCard?.expireDate || 'Chưa cập nhật'}`
+
+  infoDialog.value = true
+  mobileMenu.value = false
+}
+
+const logout = () => {
+  localStorage.removeItem('library_current_user')
+  localStorage.removeItem('library_auth_user')
+  localStorage.removeItem('user')
+  localStorage.removeItem('token')
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('isAdmin')
+
+  currentUser.value = null
+  mobileMenu.value = false
+  showMessage('Đăng xuất thành công.')
+}
+
 const toggleTheme = () => {
   isDarkMode.value = !isDarkMode.value
   showMessage(isDarkMode.value ? 'Đã bật chế độ tối.' : 'Đã bật chế độ sáng.')
-}
-
-const goToLogin = () => {
-  router.push('/login')
-}
-
-const goToRegister = () => {
-  router.push('/register')
 }
 
 const handleSearch = () => {
@@ -810,9 +994,38 @@ const filterByCategory = (category) => {
 }
 
 const borrowSelectedBook = () => {
+  if (!selectedBook.value) return
+
+  if (!isLoggedIn.value) {
+    bookDialog.value = false
+    showMessage('Bạn cần đăng nhập để mượn tài liệu.')
+    router.push('/login')
+    return
+  }
+
+  const request = {
+    id: Date.now(),
+    borrowId: `REQ-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
+    readerId: displayCardId.value || currentUser.value?.id || 'READER-DEMO',
+    readerName: displayName.value,
+    readerEmail: displayEmail.value,
+    bookId: selectedBook.value.title,
+    bookTitle: selectedBook.value.title,
+    bookAuthor: selectedBook.value.author,
+    borrowDate: new Date().toLocaleDateString('vi-VN'),
+    dueDate: '',
+    returnDate: '',
+    status: 'Chờ duyệt',
+    fineAmount: 0,
+    createdAt: new Date().toISOString()
+  }
+
+  const oldRequests = JSON.parse(localStorage.getItem('library_borrow_requests') || '[]')
+  oldRequests.unshift(request)
+  localStorage.setItem('library_borrow_requests', JSON.stringify(oldRequests))
+
   bookDialog.value = false
-  showMessage('Bạn cần đăng nhập để mượn tài liệu.')
-  router.push('/login')
+  showMessage(`Đã gửi yêu cầu mượn "${selectedBook.value.title}" đến thủ thư.`)
 }
 
 const addFavorite = (book) => {
@@ -1174,16 +1387,206 @@ const openHelp = (type) => {
   gap: 12px;
 }
 
-.footer-links a {
+.footer-links a,
+.footer-links router-link {
   color: #ccfbf1;
   text-decoration: none;
   font-size: 13px;
   transition: color 0.2s;
 }
 
-.footer-links a:hover {
+.footer-links a:hover,
+.footer-links router-link:hover {
   color: white;
   text-decoration: underline;
+}
+
+
+.user-chip {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.user-chip-name {
+  line-height: 1.1;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-chip-card {
+  line-height: 1.1;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-user-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.profile-pill {
+  height: 56px;
+  min-width: 245px;
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 12px 7px 8px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  transition: all 0.25s ease;
+}
+
+.profile-pill:hover {
+  transform: translateY(-2px);
+  border-color: #99f6e4;
+  box-shadow: 0 16px 34px rgba(13, 148, 136, 0.16);
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4) !important;
+  color: #0f766e !important;
+  border: 2px solid white;
+  box-shadow: 0 8px 18px rgba(13, 148, 136, 0.2);
+}
+
+.profile-avatar span {
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.online-dot {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  border: 2px solid #ffffff;
+}
+
+.profile-info {
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 135px;
+  overflow: hidden;
+}
+
+.profile-info strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.15;
+  max-width: 135px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-info small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.2;
+  max-width: 135px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-arrow {
+  color: #64748b;
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.profile-pill:hover .profile-arrow {
+  color: #0d9488;
+  transform: translateY(1px);
+}
+
+.profile-menu-card {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.profile-menu-head {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  color: white;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-big-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 950;
+  flex-shrink: 0;
+}
+
+.profile-menu-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.profile-menu-head p {
+  margin: 3px 0;
+  font-size: 12px;
+  color: #ccfbf1;
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-menu-head span {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.dark-mode .profile-pill {
+  background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%);
+  border-color: #334155;
+}
+
+.dark-mode .profile-info strong {
+  color: #e5e7eb;
+}
+
+.dark-mode .profile-info small {
+  color: #94a3b8;
 }
 
 @media (max-width: 960px) {
