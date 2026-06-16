@@ -13,6 +13,16 @@ services:
       - digital-library-network
     restart: always
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - digital-library-network
+    restart: always
+
   catalog-service:
     build:
       context: ./catalog-service/BackEnd
@@ -22,10 +32,12 @@ services:
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=CatalogDB;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
       ASPNETCORE_URLS: "http://+:5001"
       ASPNETCORE_ENVIRONMENT: "Development"
+      RabbitMQ__Host: "rabbitmq"
     ports:
       - "5001:5001"
     depends_on:
       - sqlserver
+      - rabbitmq
     networks:
       - digital-library-network
     restart: always
@@ -41,10 +53,12 @@ services:
       IDENTITY_SERVICE_URL: "http://identity-service:5003"
       ASPNETCORE_URLS: "http://+:5002"
       ASPNETCORE_ENVIRONMENT: "Development"
+      RabbitMQ__Host: "rabbitmq"
     ports:
       - "5002:5002"
     depends_on:
       - sqlserver
+      - rabbitmq
     networks:
       - digital-library-network
     restart: always
@@ -61,10 +75,12 @@ services:
       Jwt__Key: "Nhom3_IdentityReportService_Secret_Key_2026_AtLeast32Chars"
       Jwt__Issuer: "Nhom3.IdentityReport"
       Jwt__Audience: "DigitalLibrary"
+      RabbitMQ__Host: "rabbitmq"
     ports:
       - "5003:5003"
     depends_on:
       - sqlserver
+      - rabbitmq
     networks:
       - digital-library-network
     restart: always
